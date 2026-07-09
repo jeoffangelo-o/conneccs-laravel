@@ -1,0 +1,576 @@
+{
+  "id": "opcr-2026",
+  "year": 2026,
+  "period": "Jan-Dec 2026",
+  "officeName": "College of Computer Studies",
+  "deanId": "u2",
+  "status": "IN_PROGRESS",
+  "currentPhase": "TARGET_SETTING",
+  "majorFunctions": [
+    {
+      "id": "mf-strategic-1",
+      "title": "1. Early Procurement and Utilization of Budget",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-1-a1",
+          "code": "1.a1",
+          "description": "Submitted PPMP as required on or before February 15 for FY 2027 Budget Proposal for GAA with complete documentary requirements to Budget Unit with only 1 revision",
+          "measures": "Complete PPMP forms with specs and cost estimates",
+          "timeline": "Jan-Jun",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-1-a2",
+          "code": "1.a2",
+          "description": "Submitted PPMP as required on or before June 30 for FY 2027 Budget Proposal for Income Fund with complete documentary requirements to Budget Unit with only 1 revision",
+          "measures": "Complete PPMP forms with specs and cost estimates",
+          "timeline": "Jan-Jun",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-1-a3",
+          "code": "1.a3",
+          "description": "Submitted PPMP as required on or before August 31 for FY 2028 Budget Proposal for GAA with complete documentary requirements to Budget Unit with only 1 revision",
+          "measures": "Complete PPMP forms with specs and cost estimates",
+          "timeline": "Jul-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-1-b1",
+          "code": "1.b1",
+          "description": "Submitted Purchase Requests (PR) and relevant documents on or before February 20, May 15, and August 14, 2026 with complete documentary requirements to Procurement Unit",
+          "measures": "3 PRs submitted on time with complete attachments",
+          "timeline": "Jan-Dec",
+          "targetValue": 3,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-1-b2",
+          "code": "1.b2",
+          "description": "Submitted Purchase Requests on or before September 15 for FY 2027 Early Procurement Activities (EPA) to Procurement Unit with complete documentary requirements",
+          "measures": "EPA PR submitted on time",
+          "timeline": "Jul-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-1-c",
+          "code": "1.c",
+          "description": "100% submission of liquidation reports 15 days (local) or 30 days (international) upon return to OS to the Accounting Unit with complete documentary requirements",
+          "measures": "Liquidation reports submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-1-d",
+          "code": "1.d",
+          "description": "Submitted activity proposal to immediate supervisor 4 months before the conduct of activity",
+          "measures": "Activity proposals submitted 4 months in advance",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-2",
+      "title": "2. Quality Assurance and Excellence Program (ISO, ISA, PQA, Accreditation, QS, SUC Levelling, Universityhood)",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-2-a",
+          "code": "2.a",
+          "description": "Ensured submission of QO 5 working days after the OPCR review of targets or as scheduled to CQA with only 1 revision",
+          "measures": "QO submitted within 5 working days",
+          "timeline": "Jan-Jun",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-2-b",
+          "code": "2.b",
+          "description": "Ensured 100% submission of QO Performance Monitoring Graph on or before 12th day of the ensuing month to CQA with only 1 revision",
+          "measures": "Graph submitted on or before 12th day of month",
+          "timeline": "Jan-Dec",
+          "targetValue": 12,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-2-c",
+          "code": "2.c",
+          "description": "Ensured 100% submission of final revised Work Instruction and/or FMEA within 10 working days to CQA after review or as scheduled",
+          "measures": "Work Instructions submitted within 10 working days",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-2-d",
+          "code": "2.d",
+          "description": "100% submission of updated accreditation PPP/IP/Self-survey within 5 working days upon receipt of request as required by CQA",
+          "measures": "Accreditation documents submitted within 5 working days",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-2-e",
+          "code": "2.e",
+          "description": "Ensured 100% submission of compliance report to the previous QA recommendations within 5 working days upon receipt of request as required by CQA",
+          "measures": "Compliance report submitted within 5 working days",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-2-f",
+          "code": "2.f",
+          "description": "Ensured 100% release of accurate QA documents within 5 working days upon receipt of request",
+          "measures": "QA documents released within 5 working days",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-2-g",
+          "code": "2.g",
+          "description": "Ensured 100% submission of monthly NCARs for unmet targets to CQA on or before the 12th day of the ensuing month",
+          "measures": "NCARs submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 12,
+          "accountableUnits": "Onesa, Gastilo"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-3",
+      "title": "3. International Ranking",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-3-a",
+          "code": "3.a",
+          "description": "Submitted QS Stars Rating Monitoring Report on or before January and as required",
+          "measures": "QS Stars report submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-3-b",
+          "code": "3.b",
+          "description": "Submitted QS World University Ranking Monitoring Report on or before January and as required",
+          "measures": "QS World University report submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-3-c",
+          "code": "3.c",
+          "description": "Submitted SDG Impact Report on or before January and as required",
+          "measures": "SDG report submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-3-d",
+          "code": "3.d",
+          "description": "Submitted AUN-QA Monitoring Report on or before January and as required",
+          "measures": "AUN-QA report submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-3-e",
+          "code": "3.e",
+          "description": "Submitted UI Greenmetrics Monitoring Report on or before January and as required",
+          "measures": "UI Greenmetrics report submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-4",
+      "title": "4. Operational Planning and Budgeting",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-4-a",
+          "code": "4.a",
+          "description": "Submitted reports on the conduct of planning and budgeting per unit within January for FY 2027 GAA, within May for FY 2027 Income Fund, and within July for FY 2028 GAA to IPDU and Budget unit",
+          "measures": "Planning reports submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 3,
+          "accountableUnits": "Onesa, Gastilo, Otares"
+        },
+        {
+          "id": "si-4-b",
+          "code": "4.b",
+          "description": "Submitted FY 2026 Calendar of Activities to IPDU on or before January 15 of every year",
+          "measures": "Calendar submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-5",
+      "title": "5. Enabling Policy Mechanism",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-5-a",
+          "code": "5.a",
+          "description": "100% submission of revised/proposed manual or policy for Admin Council and BOT approval within 2026 to Board Secretary with only 2 revision",
+          "measures": "Manual/policy submitted with max 2 revisions",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Cortez Vincent"
+        },
+        {
+          "id": "si-5-b",
+          "code": "5.b",
+          "description": "100% submission of final edited copy of approved manual/policies for document control 30 working days upon BOT approval",
+          "measures": "Final manual submitted within 30 working days",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Cortez Vincent"
+        },
+        {
+          "id": "si-5-c",
+          "code": "5.c",
+          "description": "100% submission of manuals for ISBN/copyright application within the year of approval to TechTrO",
+          "measures": "Manuals submitted for ISBN/copyright",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Cortez Vincent"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-6",
+      "title": "6. Reportorial Requirements for Submission",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-6-a",
+          "code": "6.a",
+          "description": "100% submission of SALN on or before January 31st of the year to HRMDU with only 1 revision",
+          "measures": "SALN submitted on time",
+          "timeline": "Jan-Jun",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta, Bagaporo, Baluis, Benitez, Benosa, Broqueza, Colle, Cortez Vincent, Cortez Rey, Deniña, Fortuno, Ibo, Lipata, Llagas, Manlapaz, Mortel, Neo, Omorog, Oñate, Pandes, Prades, Prianes, Ramizares, James Sias"
+        },
+        {
+          "id": "si-6-b",
+          "code": "6.b",
+          "description": "100% submission of PDS on or before January 31st of the year to HRMDU with only 1 revision",
+          "measures": "PDS submitted on time",
+          "timeline": "Jan-Jun",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta, Bagaporo, Baluis, Benitez, Benosa, Broqueza, Colle, Cortez Vincent, Cortez Rey, Deniña, Fortuno, Ibo, Lipata, Llagas, Manlapaz, Mortel, Neo, Omorog, Oñate, Pandes, Prades, Prianes, Ramizares, James Sias"
+        },
+        {
+          "id": "si-6-c",
+          "code": "6.c",
+          "description": "100% submission of Individual Development Plan (IDP) on or before November 30 of the year to HRMDU with only 1 revision",
+          "measures": "IDP submitted on time",
+          "timeline": "Jul-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta, Bagaporo, Baluis, Benitez, Benosa, Broqueza, Colle, Cortez Vincent, Cortez Rey, Deniña, Fortuno, Ibo, Lipata, Llagas, Manlapaz, Mortel, Neo, Omorog, Oñate, Pandes, Prades, Prianes, Ramizares, James Sias"
+        },
+        {
+          "id": "si-6-d",
+          "code": "6.d",
+          "description": "100% submission of DTRs within the second working day of the ensuing month to HRMDU",
+          "measures": "DTRs submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 12,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta, Bagaporo, Baluis, Benitez, Benosa, Broqueza, Colle, Cortez Vincent, Cortez Rey, Deniña, Fortuno, Ibo, Lipata, Llagas, Manlapaz, Mortel, Neo, Omorog, Oñate, Pandes, Prades, Prianes, Ramizares, James Sias"
+        },
+        {
+          "id": "si-6-e1",
+          "code": "6.e1",
+          "description": "Submitted application for Special/Vacation Leave/Force Leave five days before the intended leave to HRMDU",
+          "measures": "Leave application submitted 5 days before",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta, Bagaporo, Baluis, Benitez, Benosa, Broqueza, Colle, Cortez Vincent, Cortez Rey, Deniña, Fortuno, Ibo, Lipata, Llagas, Manlapaz, Mortel, Neo, Omorog, Oñate, Pandes, Prades, Prianes, Ramizares, James Sias"
+        },
+        {
+          "id": "si-6-e2",
+          "code": "6.e2",
+          "description": "Submitted Sick Leave within the day upon return to work to HRMDU",
+          "measures": "Sick leave submitted on return day",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta, Bagaporo, Baluis, Benitez, Benosa, Broqueza, Colle, Cortez Vincent, Cortez Rey, Deniña, Fortuno, Ibo, Lipata, Llagas, Manlapaz, Mortel, Neo, Omorog, Oñate, Pandes, Prades, Prianes, Ramizares, James Sias"
+        },
+        {
+          "id": "si-6-f",
+          "code": "6.f",
+          "description": "Submitted final revised OPCR targets five (5) working days after PMT review or as scheduled by the PMT",
+          "measures": "OPCR targets submitted within 5 working days",
+          "timeline": "Jan-Jun",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-g",
+          "code": "6.g",
+          "description": "Submitted final IPCR targets to HRMDU as scheduled by the PMT",
+          "measures": "IPCR targets submitted on schedule",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-h",
+          "code": "6.h",
+          "description": "Submitted final IPCR accomplishment to HRMDU as scheduled by the PMT",
+          "measures": "IPCR accomplishment submitted on schedule",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-i",
+          "code": "6.i",
+          "description": "Submitted OPCR accomplishments with complete supporting documents (rated PMT Forms) to IPDU on or before Jan 10 and July 10",
+          "measures": "OPCR accomplishments submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 2,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-6-j",
+          "code": "6.j",
+          "description": "Submitted final revised OPCR accomplishments to IPDU as scheduled by the PMT",
+          "measures": "Final OPCR accomplishments submitted on schedule",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-6-k",
+          "code": "6.k",
+          "description": "Submitted final Midyear report on the 10th day of July to immediate supervisor",
+          "measures": "Midyear report submitted on time",
+          "timeline": "Jul-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Bayta"
+        },
+        {
+          "id": "si-6-l",
+          "code": "6.l",
+          "description": "Submitted final Year-end accomplishment report on the 10th day of January to Immediate supervisor",
+          "measures": "Year-end report submitted on time",
+          "timeline": "Jan-Jun",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Bayta"
+        },
+        {
+          "id": "si-6-m",
+          "code": "6.m",
+          "description": "100% submission of reports and other documents with complete data needed to IPDU as required",
+          "measures": "Reports submitted with complete data",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-6-n",
+          "code": "6.n",
+          "description": "100% submission of quarterly monitoring report on Operational Plan targets and 2026 Milestones to IPDU 2 weeks after the end of the quarter",
+          "measures": "Quarterly reports submitted 2 weeks after quarter end",
+          "timeline": "Jan-Dec",
+          "targetValue": 4,
+          "accountableUnits": "Onesa, Gastilo"
+        },
+        {
+          "id": "si-6-o",
+          "code": "6.o",
+          "description": "100% submission of list of accomplishments/activities conducted by the office to the IAAU on or before Wednesday of the week with or without completed activity",
+          "measures": "Weekly accomplishment list submitted",
+          "timeline": "Jan-Dec",
+          "targetValue": 52,
+          "accountableUnits": "Onesa, Bayta"
+        },
+        {
+          "id": "si-6-p",
+          "code": "6.p",
+          "description": "Submitted external reports with complete data needed to requesting agency as required",
+          "measures": "External reports submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-q",
+          "code": "6.q",
+          "description": "Submitted copies of MOA/MOU for review to LAU within 5 working days before approval/signing",
+          "measures": "MOA/MOU submitted 5 days before signing",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-r",
+          "code": "6.r",
+          "description": "Submitted copies of MOA/MOU to CIRL within 5 working days after approval",
+          "measures": "MOA/MOU submitted 5 days after approval",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-s",
+          "code": "6.s",
+          "description": "Submitted latest Annual Physical Examination (APE) Results to HSU within the year",
+          "measures": "APE results submitted within the year",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-6-t",
+          "code": "6.t",
+          "description": "Submitted documentary requirements of medical allowance to cluster VPs within December of every year",
+          "measures": "Medical allowance documents submitted in December",
+          "timeline": "Jan-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-7",
+      "title": "7. Physical Plant and Facilities Development Projects",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-7-a",
+          "code": "7.a",
+          "description": "Submitted proposed infrastructure projects with approved PPMP for the ensuing year to PMU on or before June 30",
+          "measures": "Infrastructure proposals submitted on time",
+          "timeline": "Jan-Jun",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Bagaporo"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-8",
+      "title": "8. Performance Results",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-8-a",
+          "code": "8.a",
+          "description": "Submitted certification of at least 90% achievement of performance indicators/targets based on office core mandates and functions every 2nd week of December to IPDU",
+          "measures": "Performance certification submitted in December",
+          "timeline": "Jul-Dec",
+          "targetValue": 90,
+          "accountableUnits": "Onesa, Gastilo"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-9",
+      "title": "9. Gender and Development",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-9-a",
+          "code": "9.a",
+          "description": "100% submission of PAP proposals subjected to Harmonized GAD Guidelines (HGDG) and with GAD attributes at least 10 working days before the submission of activity proposal to the immediate supervisor",
+          "measures": "GAD proposals submitted 10 days before activity proposal",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Bagaporo"
+        },
+        {
+          "id": "si-9-b",
+          "code": "9.b",
+          "description": "100% submission of terminal reports subjected to Project Implementation and Management, and Monitoring and Evaluation (PIMME) HGDG Checklist, and with those GAD attributes within 10 working days after the conduct of Activity",
+          "measures": "GAD terminal reports submitted within 10 days",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Bagaporo"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-10",
+      "title": "10. Records Inventory",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-10-a",
+          "code": "10.a",
+          "description": "Submitted final NAP Form No. 1 (Records Inventory and Appraisal) on or before June 30, 2026 to RFOIU",
+          "measures": "NAP Form 1 submitted on time",
+          "timeline": "Jul-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Otares, Tañamor"
+        },
+        {
+          "id": "si-10-b",
+          "code": "10.b",
+          "description": "Submitted final NAP Form No. 2 (Records Disposition Schedule) on or before August 31, 2026 to RFOIU",
+          "measures": "NAP Form 2 submitted on time",
+          "timeline": "Jul-Dec",
+          "targetValue": 1,
+          "accountableUnits": "Onesa, Otares, Tañamor"
+        }
+      ]
+    },
+    {
+      "id": "mf-strategic-11",
+      "title": "11. Completion of Committee/Special Assignments Assigned by OP, VPs, and immediate supervisors",
+      "category": "STRATEGIC",
+      "weight": 0.45,
+      "successIndicators": [
+        {
+          "id": "si-11-a",
+          "code": "11.a",
+          "description": "Submitted summary list of received committees/special assignments January 10 and July 10",
+          "measures": "Committee list submitted on time",
+          "timeline": "Jan-Dec",
+          "targetValue": 2,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        },
+        {
+          "id": "si-11-b",
+          "code": "11.b",
+          "description": "100% submission of accomplishment reports of committee/special assignments within 5 days of completion with supporting documents to the immediate supervisor",
+          "measures": "Committee reports submitted within 5 days",
+          "timeline": "Jan-Dec",
+          "targetValue": 100,
+          "accountableUnits": "Onesa, Gastilo, Otares, Tañamor, Bayta"
+        }
+      ]
+    }
+  ]
+}

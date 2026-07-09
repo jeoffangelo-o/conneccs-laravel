@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "ConneCCS - Target Monitoring System",
+    "slug": "conneccs-frontend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "conneccs",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ccs.conneccs"
+    },
+    "android": {
+      "package": "com.ccs.conneccs",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/logo.png",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "icon": "./assets/logo.png",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
