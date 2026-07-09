@@ -34,6 +34,8 @@ return new class extends Migration
             $table->string('avatar_url')->nullable();
             $table->string('phone')->nullable();
             $table->text('bio')->nullable();
+            $table->string('google_id')->nullable()->unique();
+            $table->string('profile_picture')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();

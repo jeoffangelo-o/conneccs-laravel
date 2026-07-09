@@ -94,6 +94,11 @@ coverage/
 #!README.md
 
 # =========================
+# Prototype (old version)
+# =========================
+conneccs-react-native/
+
+# =========================
 # Temporary Files
 # =========================
 *.tmp
