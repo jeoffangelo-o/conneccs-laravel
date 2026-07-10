@@ -2,99 +2,220 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useData } from '../context/DataContext';
+import { SvgIcon } from './SvgIcon';
+
+interface MenuItemData {
+  name: string;
+  icon: string;
+  route: string;
+  section: string;
+  roles: string[];
+  badge?: number | null;
+}
 
 export default function CustomDrawer(props: DrawerContentComponentProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
+  const { getUnreadCount } = useData();
   const router = useRouter();
 
-  const MenuItem = ({ icon, label, route, iconLibrary = 'MaterialCommunityIcons' }: any) => {
-    const isActive = props.state.routeNames[props.state.index] === route;
-    const IconComponent = iconLibrary === 'Ionicons' ? Ionicons : MaterialCommunityIcons;
+  const unreadCount = user ? getUnreadCount(user.id) : 0;
 
+  // Define menu items with role-based visibility
+  const menuItems: MenuItemData[] = [
+    { 
+      name: 'Dashboard', 
+      icon: 'grid', 
+      route: 'dashboard', 
+      section: 'Main',
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'ADMIN', 'SECRETARY', 'COORDINATOR']
+    },
+    { 
+      name: 'My IPCR', 
+      icon: 'document', 
+      route: 'my-ipcr', 
+      section: 'IPCR',
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'SECRETARY', 'COORDINATOR']
+    },
+    { 
+      name: 'OPCR', 
+      icon: 'pulse', 
+      route: 'opcr', 
+      section: 'Main',
+      roles: ['DEAN', 'ADMIN', 'SECRETARY']
+    },
+    { 
+      name: 'Upload OPCR', 
+      icon: 'document', 
+      route: 'secretary-opcr-upload', 
+      section: 'Secretary',
+      roles: ['SECRETARY', 'ADMIN']
+    },
+    { 
+      name: 'Rating Queue', 
+      icon: 'clipboard', 
+      route: 'review-queue', 
+      section: 'Secretary',
+      roles: ['SECRETARY', 'ADMIN']
+    },
+    { 
+      name: 'Verification Queue', 
+      icon: 'clipboard', 
+      route: 'coordinator-queue', 
+      section: 'Coordinator',
+      roles: ['COORDINATOR', 'ADMIN']
+    },
+    { 
+      name: 'Approval Queue', 
+      icon: 'clipboard', 
+      route: 'review-queue', 
+      section: 'Dean',
+      roles: ['DEAN']
+    },
+    { 
+      name: 'OPCR Consolidation', 
+      icon: 'pulse', 
+      route: 'dean-opcr-consolidation', 
+      section: 'Dean',
+      roles: ['DEAN', 'ADMIN']
+    },
+    { 
+      name: 'Calendar', 
+      icon: 'calendar', 
+      route: 'calendar', 
+      section: 'IPCR',
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'ADMIN', 'SECRETARY', 'COORDINATOR']
+    },
+    { 
+      name: 'Reportorial Requirements', 
+      icon: 'folder', 
+      route: 'reportorial-requirements', 
+      section: 'Documents',
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'ADMIN', 'SECRETARY', 'COORDINATOR']
+    },
+    { 
+      name: 'Messages', 
+      icon: 'messageCircle', 
+      route: 'messages', 
+      section: 'Communication',
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'ADMIN', 'SECRETARY', 'COORDINATOR']
+    },
+    { 
+      name: 'Notifications', 
+      icon: 'bell', 
+      route: 'notifications', 
+      section: 'Account',
+      badge: unreadCount > 0 ? unreadCount : null,
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'ADMIN', 'SECRETARY', 'COORDINATOR']
+    },
+    { 
+      name: 'Profile', 
+      icon: 'user', 
+      route: 'profile', 
+      section: 'Account',
+      roles: ['FACULTY', 'CHAIR', 'DEAN', 'ADMIN', 'SECRETARY', 'COORDINATOR']
+    },
+  ];
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => 
+    user && item.roles.includes(user.role)
+  );
+
+  const renderSection = (section: string) => {
+    const items = visibleMenuItems.filter(item => item.section === section);
+    if (items.length === 0) return null;
+    
     return (
-      <TouchableOpacity
-        style={[
-          styles.menuItem,
-          { backgroundColor: isActive ? colors.accent + '20' : 'transparent' },
-        ]}
-        onPress={() => router.push(`/${route}`)}
-      >
-        <IconComponent
-          name={icon}
-          size={22}
-          color={isActive ? colors.accent : colors.text2}
-          style={styles.menuIcon}
-        />
-        <Text style={[styles.menuLabel, { color: isActive ? colors.accent : colors.text }]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
+      <View key={section}>
+        <Text style={[styles.sectionLabel, { color: colors.text3 }]}>{section}</Text>
+        {items.map((item) => {
+          const isFocused = props.state.routes[props.state.index].name === item.route;
+          return (
+            <TouchableOpacity
+              key={item.route}
+              style={[
+                styles.navItem,
+                isFocused && { ...styles.navItemActive, borderLeftColor: colors.yellow, backgroundColor: 'rgba(244,208,63,0.15)' }
+              ]}
+              onPress={() => router.push(`/${item.route}`)}
+            >
+              <SvgIcon
+                name={item.icon}
+                size={18}
+                color={isFocused ? colors.yellow : colors.text3}
+              />
+              <Text style={[styles.navText, { color: colors.text3 }, isFocused && { color: colors.yellow, ...styles.navTextActive }]}>
+                {item.name}
+              </Text>
+              {item.badge && (
+                <View style={[styles.navBadge, { backgroundColor: colors.red }]}>
+                  <Text style={styles.navBadgeText}>{item.badge}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     );
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/login');
+  const getUserInitials = (name?: string) => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return parts[0][0] + parts[1][0];
+    }
+    return name[0];
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg2 }]}>
-      <View style={[styles.header, { backgroundColor: colors.accent, borderBottomColor: colors.border }]}>
-        <Image
-          source={require('../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={[styles.userName, { color: colors.bg }]}>{user?.name}</Text>
-        <Text style={[styles.userEmail, { color: colors.bg }]}>{user?.email}</Text>
-        <Text style={[styles.userRole, { color: colors.bg }]}>{user?.role}</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.logoImage}
+          />
+          <View>
+            <Text style={[styles.brandName, { color: colors.text }]}>ConneCCS</Text>
+            <Text style={[styles.brandTagline, { color: colors.text3 }]}>Target Monitoring</Text>
+          </View>
+        </View>
       </View>
 
-      <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
-        <MenuItem icon="view-dashboard" label="Dashboard" route="dashboard" />
-        <MenuItem icon="file-document-multiple" label="My IPCR" route="my-ipcr" />
-        <MenuItem icon="clipboard-text" label="OPCR" route="opcr" />
-        <MenuItem icon="calendar" label="Calendar" route="calendar" iconLibrary="Ionicons" />
-        
-        {(user?.role === 'SECRETARY' || user?.role === 'DEAN') && (
-          <MenuItem icon="clipboard-check" label="Review Queue" route="review-queue" />
-        )}
-        
-        {(user?.role === 'COORDINATOR') && (
-          <MenuItem icon="format-list-checks" label="Coordinator Queue" route="coordinator-queue" />
-        )}
-        
-        <MenuItem icon="folder-multiple" label="Reportorial" route="reportorial-requirements" />
-        <MenuItem icon="message-text" label="Messages" route="messages" iconLibrary="Ionicons" />
-        <MenuItem icon="notifications" label="Notifications" route="notifications" iconLibrary="Ionicons" />
-        <MenuItem icon="person" label="Profile" route="profile" iconLibrary="Ionicons" />
+      <ScrollView style={styles.navContainer} showsVerticalScrollIndicator={false}>
+        {renderSection('Main')}
+        {renderSection('Secretary')}
+        {renderSection('Coordinator')}
+        {renderSection('Dean')}
+        {renderSection('IPCR')}
+        {renderSection('Documents')}
+        {renderSection('Communication')}
+        {renderSection('Account')}
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <TouchableOpacity
-          style={[styles.themeToggle, { backgroundColor: colors.bg3 }]}
-          onPress={toggleTheme}
-        >
-          <Ionicons
-            name={isDark ? 'sunny' : 'moon'}
-            size={20}
-            color={colors.text}
+        <View style={styles.userInfo}>
+          <View style={[styles.userAvatar, { backgroundColor: colors.accent }]}>
+            <Text style={styles.userAvatarText}>
+              {getUserInitials(user?.name)}
+            </Text>
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={[styles.userName, { color: colors.text }]}>{user?.name || 'Guest'}</Text>
+            <Text style={[styles.userRole, { color: colors.text3 }]}>{user?.role?.toLowerCase() || 'guest'}</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={[styles.themeToggle, { borderColor: colors.border }]} onPress={toggleTheme}>
+          <SvgIcon
+            name={isDark ? 'sun' : 'moon'}
+            size={18}
+            color={colors.text2}
           />
-          <Text style={[styles.themeText, { color: colors.text }]}>
-            {isDark ? 'Light Mode' : 'Dark Mode'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: colors.red }]}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -107,77 +228,116 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 48,
     borderBottomWidth: 1,
-    alignItems: 'center',
   },
-  logo: {
-    width: 60,
-    height: 60,
-    marginBottom: 12,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  userRole: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  menu: {
-    flex: 1,
-    paddingTop: 12,
-  },
-  menuItem: {
+  logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    marginHorizontal: 8,
-    marginVertical: 2,
+    gap: 10,
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+  },
+  brandName: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  brandTagline: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  navContainer: {
+    flex: 1,
+    padding: 12,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    marginBottom: 2,
+    position: 'relative',
+    paddingLeft: 12,
   },
-  menuIcon: {
-    marginRight: 16,
+  navItemActive: {
+    borderLeftWidth: 4,
+    paddingLeft: 8,
   },
-  menuLabel: {
-    fontSize: 15,
+  navText: {
+    fontSize: 14,
     fontWeight: '500',
+    flex: 1,
+    marginLeft: 8,
+  },
+  navTextActive: {
+    fontWeight: '600',
+  },
+  navBadge: {
+    borderRadius: 99,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    minWidth: 18,
+    alignItems: 'center',
+  },
+  navBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   footer: {
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
     borderTopWidth: 1,
   },
-  themeToggle: {
+  userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    flex: 1,
+    gap: 10,
   },
-  themeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  logoutButton: {
-    flexDirection: 'row',
+  userAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
   },
-  logoutText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '600',
+  userAvatarText: {
     color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  userRole: {
+    fontSize: 11,
+    textTransform: 'capitalize',
+  },
+  themeToggle: {
+    width: 32,
+    height: 32,
+    borderWidth: 1,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

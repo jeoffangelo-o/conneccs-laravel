@@ -7,12 +7,14 @@ interface DataContextType {
   fetchOPCR: () => Promise<any>;
   fetchNotifications: () => Promise<any[]>;
   refreshData: () => Promise<void>;
+  getUnreadCount: (userId: number) => number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   const fetchDashboardData = async () => {
     try {
@@ -53,11 +55,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const fetchNotifications = async () => {
     try {
       const response = await apiService.get('/notifications');
+      setNotifications(response.data);
       return response.data;
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
       return [];
     }
+  };
+
+  const getUnreadCount = (userId: number): number => {
+    // Count unread notifications for the user
+    const unreadNotifications = notifications.filter(
+      (notif) => !notif.read && notif.userId === userId
+    );
+    return unreadNotifications.length;
   };
 
   const refreshData = async () => {
@@ -84,6 +95,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchOPCR,
         fetchNotifications,
         refreshData,
+        getUnreadCount,
       }}
     >
       {children}
