@@ -11,7 +11,6 @@ module.exports = function(api) {
           config: './tamagui.config.ts',
         },
       ],
-      'expo-router/babel',
     ],
   };
 };

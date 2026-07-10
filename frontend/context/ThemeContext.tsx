@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-interface Theme Colors {
+interface Colors {
   bg: string;
   bg2: string;
   bg3: string;

@@ -44,7 +44,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "@tamagui/babel-plugin": "^2.4.3"
   },
   "private": true
 }
