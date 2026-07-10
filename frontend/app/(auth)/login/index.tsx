@@ -27,7 +27,7 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@cspc\.edu\.ph$/;
+    const emailRegex = /^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/;
     return emailRegex.test(email.toLowerCase());
   };
 
@@ -38,7 +38,7 @@ export default function LoginScreen() {
     }
 
     if (!validateEmail(email)) {
-      setError('Only @cspc.edu.ph email addresses are allowed');
+      setError('Only @cspc.edu.ph or @my.cspc.edu.ph email addresses are allowed');
       return;
     }
 
@@ -80,7 +80,7 @@ export default function LoginScreen() {
             Target Monitoring System
           </Text>
           <Text style={[styles.emailNote, { color: colors.text3 }]}>
-            Sign in with your @cspc.edu.ph account
+            Sign in with your @cspc.edu.ph or @my.cspc.edu.ph account
           </Text>
 
           {/* Error Message */}
@@ -101,7 +101,7 @@ export default function LoginScreen() {
             />
             <TextInput
               style={[styles.input, { backgroundColor: colors.bg2, color: colors.text, borderColor: colors.border }]}
-              placeholder="Email (@cspc.edu.ph)"
+              placeholder="Email (@cspc.edu.ph or @my.cspc.edu.ph)"
               placeholderTextColor={colors.text3}
               value={email}
               onChangeText={(text) => {

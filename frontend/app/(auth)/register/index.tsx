@@ -33,7 +33,7 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@cspc\.edu\.ph$/;
+    const emailRegex = /^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/;
     return emailRegex.test(email.toLowerCase());
   };
 
@@ -45,7 +45,7 @@ export default function RegisterScreen() {
     }
 
     if (!validateEmail(formData.email)) {
-      setError('Only @cspc.edu.ph email addresses are allowed');
+      setError('Only @cspc.edu.ph or @my.cspc.edu.ph email addresses are allowed');
       return;
     }
 
@@ -96,7 +96,7 @@ export default function RegisterScreen() {
             Join ConneCCS Target Monitoring System
           </Text>
           <Text style={[styles.emailNote, { color: colors.text3 }]}>
-            Use your @cspc.edu.ph email address
+            Use your @cspc.edu.ph or @my.cspc.edu.ph email address
           </Text>
 
           {/* Error Message */}
@@ -157,7 +157,7 @@ export default function RegisterScreen() {
             />
             <TextInput
               style={[styles.input, { backgroundColor: colors.bg2, color: colors.text, borderColor: colors.border }]}
-              placeholder="Email (@cspc.edu.ph)"
+              placeholder="Email (@cspc.edu.ph or @my.cspc.edu.ph)"
               placeholderTextColor={colors.text3}
               value={formData.email}
               onChangeText={(text) => {
