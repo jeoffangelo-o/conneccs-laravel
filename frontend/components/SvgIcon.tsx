@@ -29,6 +29,8 @@ export const SvgIcon: React.FC<SvgIconProps> = ({ name, size = 24, color = '#000
     alertCircle: { library: 'Ionicons', name: 'alert-circle-outline' },
     barChart: { library: 'Ionicons', name: 'bar-chart-outline' },
     pulse: { library: 'Ionicons', name: 'pulse-outline' },
+    logOut: { library: 'Ionicons', name: 'log-out-outline' },
+    chevronRight: { library: 'Ionicons', name: 'chevron-forward-outline' },
   };
 
   const iconInfo = iconMap[name] || iconMap.grid;

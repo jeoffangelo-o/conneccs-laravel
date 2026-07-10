@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
@@ -13,6 +15,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import { SvgIcon } from '../../../components/SvgIcon';
+import { apiService } from '../../../services/api';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -20,25 +23,94 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
+  
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
-  const stats = [
-    { label: 'TOTAL REPORTS', value: '42', icon: 'document', color: colors.yellow, subtext: 'Across all faculty' },
-    { label: 'SUBMITTED', value: '35', icon: 'checkCircle', color: colors.green, subtext: 'On time' },
-    { label: 'OVERDUE', value: '3', icon: 'alertCircle', color: colors.red, subtext: 'Requires follow-up' },
-    { label: 'IPCR PENDING', value: '4', icon: 'barChart', color: colors.yellow, subtext: 'Awaiting review' },
-    { label: 'ACTIVE FACULTY', value: '5', icon: 'users', color: colors.teal, subtext: 'Currently on-duty' },
-  ];
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-  const recentReports = [
-    { faculty: 'Dr. Maria Santos', type: 'Accomplishment Report', period: 'Q1 2025', date: 'Apr 15, 2025', status: 'Submitted' },
-    { faculty: 'Prof. Juan Dela Cruz', type: 'Extension Output', period: 'Q1 2025', date: 'Apr 15, 2025', status: 'Pending' },
-    { faculty: 'Dr. Ana Reyes', type: 'Research Output', period: 'Q1 2025', date: 'Apr 10, 2025', status: 'Overdue' },
-  ];
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.get('/dashboard');
+      setDashboardData(response.data);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      // Set default/mock data if API fails
+      setDashboardData({
+        stats: {
+          totalReports: 0,
+          submitted: 0,
+          overdue: 0,
+          ipcrPending: 0,
+          activeFaculty: 0,
+        },
+        recentReports: [],
+        ipcrs: [],
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const ipcrs = [
-    { faculty: 'Dr. Maria Santos', period: '1st Sem 2025', score: '4.86', rating: 'Outstanding', status: 'Approved' },
-    { faculty: 'Prof. Juan Dela Cruz', period: '1st Sem 2025', score: '4.59', rating: 'Very Satisfactory', status: 'For Review' },
-  ];
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboardData();
+    setRefreshing(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.loadingText, { color: colors.text2 }]}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  const stats = dashboardData?.stats ? [
+    { 
+      label: 'TOTAL REPORTS', 
+      value: String(dashboardData.stats.totalReports || 0), 
+      icon: 'document', 
+      color: colors.yellow, 
+      subtext: 'Across all faculty' 
+    },
+    { 
+      label: 'SUBMITTED', 
+      value: String(dashboardData.stats.submitted || 0), 
+      icon: 'checkCircle', 
+      color: colors.green, 
+      subtext: 'On time' 
+    },
+    { 
+      label: 'OVERDUE', 
+      value: String(dashboardData.stats.overdue || 0), 
+      icon: 'alertCircle', 
+      color: colors.red, 
+      subtext: 'Requires follow-up' 
+    },
+    { 
+      label: 'IPCR PENDING', 
+      value: String(dashboardData.stats.ipcrPending || 0), 
+      icon: 'barChart', 
+      color: colors.yellow, 
+      subtext: 'Awaiting review' 
+    },
+    { 
+      label: 'ACTIVE FACULTY', 
+      value: String(dashboardData.stats.activeFaculty || 0), 
+      icon: 'users', 
+      color: colors.teal, 
+      subtext: 'Currently on-duty' 
+    },
+  ] : [];
+
+  const recentReports = dashboardData?.recentReports || [];
+  const ipcrs = dashboardData?.ipcrs || [];
 
   return (
     <View style={styles.container}>
@@ -68,7 +140,17 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.accent}
+          />
+        }
+      >
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           {stats.map((stat, index) => (
@@ -99,19 +181,25 @@ export default function DashboardScreen() {
               <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>DUE DATE</Text>
               <Text style={[styles.tableHeaderCell, { flex: 1 }]}>STATUS</Text>
             </View>
-            {recentReports.map((report, index) => (
-              <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{report.faculty}</Text>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{report.type}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{report.period}</Text>
-                <Text style={[styles.tableCell, { flex: 1.5 }]}>{report.date}</Text>
-                <View style={[styles.tableCell, { flex: 1 }]}>
-                  <View style={[styles.statusBadge, report.status === 'Submitted' ? styles.statusGreen : report.status === 'Pending' ? styles.statusYellow : styles.statusRed]}>
-                    <Text style={styles.statusText}>{report.status}</Text>
+            {recentReports.length > 0 ? (
+              recentReports.map((report: any, index: number) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, { flex: 2 }]}>{report.faculty || report.facultyName}</Text>
+                  <Text style={[styles.tableCell, { flex: 2 }]}>{report.type || report.reportType}</Text>
+                  <Text style={[styles.tableCell, { flex: 1 }]}>{report.period}</Text>
+                  <Text style={[styles.tableCell, { flex: 1.5 }]}>{report.date || report.dueDate}</Text>
+                  <View style={[styles.tableCell, { flex: 1 }]}>
+                    <View style={[styles.statusBadge, report.status === 'Submitted' ? styles.statusGreen : report.status === 'Pending' ? styles.statusYellow : styles.statusRed]}>
+                      <Text style={styles.statusText}>{report.status}</Text>
+                    </View>
                   </View>
                 </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: colors.text3 }]}>No recent reports</Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
@@ -131,19 +219,25 @@ export default function DashboardScreen() {
               <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>RATING</Text>
               <Text style={[styles.tableHeaderCell, { flex: 1 }]}>STATUS</Text>
             </View>
-            {ipcrs.map((ipcr, index) => (
-              <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{ipcr.faculty}</Text>
-                <Text style={[styles.tableCell, { flex: 1.5 }]}>{ipcr.period}</Text>
-                <Text style={[styles.tableCell, { flex: 1, fontWeight: '700' }]}>{ipcr.score}</Text>
-                <Text style={[styles.tableCell, { flex: 1.5, color: colors.green }]}>{ipcr.rating}</Text>
-                <View style={[styles.tableCell, { flex: 1 }]}>
-                  <View style={[styles.statusBadge, styles.statusGreen]}>
-                    <Text style={styles.statusText}>{ipcr.status}</Text>
+            {ipcrs.length > 0 ? (
+              ipcrs.map((ipcr: any, index: number) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, { flex: 2 }]}>{ipcr.faculty || ipcr.facultyName}</Text>
+                  <Text style={[styles.tableCell, { flex: 1.5 }]}>{ipcr.period}</Text>
+                  <Text style={[styles.tableCell, { flex: 1, fontWeight: '700' }]}>{ipcr.score || ipcr.finalScore}</Text>
+                  <Text style={[styles.tableCell, { flex: 1.5, color: colors.green }]}>{ipcr.rating}</Text>
+                  <View style={[styles.tableCell, { flex: 1 }]}>
+                    <View style={[styles.statusBadge, styles.statusGreen]}>
+                      <Text style={styles.statusText}>{ipcr.status}</Text>
+                    </View>
                   </View>
                 </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: colors.text3 }]}>No IPCR data</Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
       </ScrollView>
@@ -155,6 +249,21 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
+  emptyState: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
   },
   topbar: {
     backgroundColor: colors.bg2,

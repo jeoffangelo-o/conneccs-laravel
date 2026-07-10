@@ -17,10 +17,19 @@ interface MenuItemData {
 }
 
 export default function CustomDrawer(props: DrawerContentComponentProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const { getUnreadCount } = useData();
   const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   const unreadCount = user ? getUnreadCount(user.id) : 0;
 
@@ -210,13 +219,22 @@ export default function CustomDrawer(props: DrawerContentComponentProps) {
             <Text style={[styles.userRole, { color: colors.text3 }]}>{user?.role?.toLowerCase() || 'guest'}</Text>
           </View>
         </View>
-        <TouchableOpacity style={[styles.themeToggle, { borderColor: colors.border }]} onPress={toggleTheme}>
-          <SvgIcon
-            name={isDark ? 'sun' : 'moon'}
-            size={18}
-            color={colors.text2}
-          />
-        </TouchableOpacity>
+        <View style={styles.footerActions}>
+          <TouchableOpacity style={[styles.iconButton, { borderColor: colors.border }]} onPress={toggleTheme}>
+            <SvgIcon
+              name={isDark ? 'sun' : 'moon'}
+              size={18}
+              color={colors.text2}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconButton, { borderColor: colors.border }]} onPress={handleLogout}>
+            <SvgIcon
+              name="logOut"
+              size={18}
+              color={colors.red}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -332,7 +350,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'capitalize',
   },
-  themeToggle: {
+  footerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
     width: 32,
     height: 32,
     borderWidth: 1,
