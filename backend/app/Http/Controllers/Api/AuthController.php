@@ -21,7 +21,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'firstName' => 'required|string|max:255',
             'lastName' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users|regex:/^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/',
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', 'regex:/^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/'],
             'password' => 'required|string|min:8',
             'role' => 'required|in:FACULTY,SECRETARY,COORDINATOR,CHAIR,DEAN,VPAA',
         ], [
@@ -76,7 +76,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|regex:/^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/',
+            'email' => ['required', 'email', 'regex:/^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/'],
             'password' => 'required|string',
         ], [
             'email.regex' => 'Only @cspc.edu.ph or @my.cspc.edu.ph email addresses are allowed',
@@ -125,7 +125,7 @@ class AuthController extends Controller
     public function googleAuth(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|regex:/^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/',
+            'email' => ['required', 'email', 'regex:/^[^\s@]+@(cspc\.edu\.ph|my\.cspc\.edu\.ph)$/'],
             'firstName' => 'required|string',
             'lastName' => 'required|string',
             'googleId' => 'required|string',
