@@ -15,11 +15,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->command->info('🌱 Starting database seeding...');
+        $this->command->info('');
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Seed test users first (channels need users to exist)
+        $this->call([
+            UserSeeder::class,
         ]);
+
+        $this->command->info('');
+        
+        // Seed channels and channel messages (requires users to exist)
+        $this->call([
+            ChannelSeeder::class,
+        ]);
+
+        $this->command->info('');
+        $this->command->info('✅ Database seeding completed!');
+        $this->command->info('🚀 You can now login with any of the test accounts listed above');
     }
 }
