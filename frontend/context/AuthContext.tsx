@@ -1,10 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export interface User {
   id: string;
@@ -18,7 +14,6 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<any>;
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -34,25 +29,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Google OAuth configuration
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Replace these with your actual Google OAuth credentials
-    webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
-    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-  });
-
   useEffect(() => {
     loadUserFromStorage();
   }, []);
-
-  // Handle Google OAuth response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      handleGoogleAuthSuccess(authentication);
-    }
-  }, [response]);
 
   const loadUserFromStorage = async () => {
     try {
@@ -69,52 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to load user from storage:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGoogleAuthSuccess = async (authentication: any) => {
-    try {
-      // Get user info from Google
-      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${authentication.accessToken}` },
-      });
-      const googleUser = await userInfoResponse.json();
-
-      // Validate email domain
-      if (!googleUser.email.endsWith('@cspc.edu.ph')) {
-        throw new Error('Only @cspc.edu.ph email addresses are allowed');
-      }
-
-      // Send to backend for authentication/registration
-      const response = await apiService.post('/auth/google', {
-        email: googleUser.email,
-        firstName: googleUser.given_name,
-        lastName: googleUser.family_name,
-        googleId: googleUser.sub,
-        picture: googleUser.picture,
-      });
-
-      const { token, user: userData } = response.data;
-
-      await AsyncStorage.setItem(AUTH_STORAGE_KEY, token);
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
-
-      setUser(userData);
-      apiService.setAuthToken(token);
-
-      return { email: googleUser.email };
-    } catch (error) {
-      console.error('Google auth error:', error);
-      throw error;
-    }
-  };
-
-  const loginWithGoogle = async () => {
-    try {
-      return await promptAsync();
-    } catch (error) {
-      console.error('Google login error:', error);
-      throw new Error('Failed to initiate Google sign-in');
     }
   };
 
@@ -165,7 +98,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         login,
-        loginWithGoogle,
         register,
         logout,
         isAuthenticated: !!user,

@@ -25,11 +25,10 @@ export default function RegisterScreen() {
     role: 'FACULTY',
   });
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, loginWithGoogle } = useAuth();
+  const { register } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -79,27 +78,7 @@ export default function RegisterScreen() {
     }
   };
 
-  const handleGoogleRegister = async () => {
-    setGoogleLoading(true);
-    setError('');
 
-    try {
-      const result = await loginWithGoogle();
-      
-      // Validate that the Google account email is from cspc.edu.ph
-      if (result.email && !validateEmail(result.email)) {
-        setError('Only @cspc.edu.ph email addresses are allowed');
-        setGoogleLoading(false);
-        return;
-      }
-
-      router.replace('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed. Please try again.');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   return (
     <KeyboardAvoidingView 
@@ -127,31 +106,6 @@ export default function RegisterScreen() {
               <Text style={[styles.errorText, { color: colors.red }]}>{error}</Text>
             </View>
           ) : null}
-
-          {/* Google Sign Up Button */}
-          <TouchableOpacity
-            style={[styles.googleButton, { backgroundColor: '#fff', borderColor: colors.border }]}
-            onPress={handleGoogleRegister}
-            disabled={googleLoading || loading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#4285F4" />
-            ) : (
-              <>
-                <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
-                <Text style={[styles.googleButtonText, { color: '#000' }]}>
-                  Sign up with Google
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dividerText, { color: colors.text3 }]}>OR</Text>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          </View>
 
           {/* First Name */}
           <View style={styles.inputContainer}>
@@ -319,7 +273,7 @@ export default function RegisterScreen() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.accent }]}
             onPress={handleRegister}
-            disabled={loading || googleLoading}
+            disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color={colors.bg} />
@@ -400,37 +354,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
   },
-  googleButton: {
-    width: '100%',
-    maxWidth: 400,
-    height: 50,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
-    marginBottom: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    fontSize: 14,
-  },
+
   inputContainer: {
     width: '100%',
     maxWidth: 400,
