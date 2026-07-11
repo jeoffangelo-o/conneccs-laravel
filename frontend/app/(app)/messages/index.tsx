@@ -59,8 +59,12 @@ export default function MessagesScreen() {
     try {
       setLoading(true);
       const response = await apiService.get('/channels');
-      // Ensure we always have an array
-      const channelsData = Array.isArray(response.data) ? response.data : [];
+      // API returns { success: true, data: [...] }
+      const channelsData = Array.isArray(response.data?.data) 
+        ? response.data.data 
+        : Array.isArray(response.data) 
+          ? response.data 
+          : [];
       setChannels(channelsData);
       
       // Auto-select first channel
@@ -78,8 +82,12 @@ export default function MessagesScreen() {
   const loadMessages = async (channelId: string) => {
     try {
       const response = await apiService.get(`/channels/${channelId}/messages`);
-      // Ensure we always have an array
-      const messagesData = Array.isArray(response.data) ? response.data : [];
+      // API returns { success: true, data: [...] }
+      const messagesData = Array.isArray(response.data?.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+          ? response.data
+          : [];
       setMessages(messagesData);
       
       // Scroll to bottom after loading
@@ -109,9 +117,10 @@ export default function MessagesScreen() {
       channelId: selectedChannel.id,
       userId: user?.id,
       userName: user?.name,
-      text: messageText.trim(),
+      content: messageText.trim(),
       createdAt: new Date().toISOString(),
       isMine: true,
+      isCurrentUser: true,
     };
     
     // Optimistic update
@@ -126,7 +135,7 @@ export default function MessagesScreen() {
     try {
       setSending(true);
       await apiService.post(`/channels/${selectedChannel.id}/messages`, {
-        text: messageText.trim(),
+        content: messageText.trim(),
       });
       
       // Reload messages to get server version
@@ -466,7 +475,7 @@ export default function MessagesScreen() {
                 </View>
               ) : (
                 messages.map((message, index) => {
-                  const isMine = message.userId === user?.id;
+                  const isMine = message.isCurrentUser || message.userId === user?.id;
                   const showAvatar = !isMine && (
                     index === messages.length - 1 ||
                     messages[index + 1]?.userId !== message.userId
@@ -512,7 +521,7 @@ export default function MessagesScreen() {
                             styles.messageText,
                             isMine && styles.messageTextMine
                           ]}>
-                            {message.text}
+                            {message.content || message.text}
                           </Text>
                         </View>
                         <Text style={[
