@@ -30,11 +30,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [ChannelController::class, 'index']);
         Route::post('/', [ChannelController::class, 'store']);
         Route::get('/{id}', [ChannelController::class, 'show']);
+        Route::get('/{id}/members', [ChannelController::class, 'getMembers']);
         Route::get('/{id}/messages', [ChannelController::class, 'getMessages']);
         Route::post('/{id}/messages', [ChannelController::class, 'sendMessage']);
         Route::put('/{id}/read', [ChannelController::class, 'markAsRead']);
         Route::put('/{channelId}/messages/{messageId}', [ChannelController::class, 'updateMessage']);
         Route::delete('/{channelId}/messages/{messageId}', [ChannelController::class, 'deleteMessage']);
+        Route::post('/{channelId}/messages/{messageId}/react', [ChannelController::class, 'toggleReaction']);
+        Route::post('/upload', [ChannelController::class, 'uploadAttachment']);
     });
     
     // Add more protected routes here

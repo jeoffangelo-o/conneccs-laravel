@@ -17,6 +17,7 @@ class ChannelMessage extends Model
         'content',
         'reply_to_id',
         'attachments',
+        'mentioned_users',
         'is_pinned',
         'is_edited',
         'edited_at',
@@ -24,6 +25,7 @@ class ChannelMessage extends Model
 
     protected $casts = [
         'attachments' => 'array',
+        'mentioned_users' => 'array',
         'is_pinned' => 'boolean',
         'is_edited' => 'boolean',
         'edited_at' => 'datetime',
@@ -61,5 +63,21 @@ class ChannelMessage extends Model
     public function replies()
     {
         return $this->hasMany(ChannelMessage::class, 'reply_to_id');
+    }
+
+    /**
+     * Get reactions to this message
+     */
+    public function reactions()
+    {
+        return $this->hasMany(MessageReaction::class, 'message_id');
+    }
+
+    /**
+     * Get mentioned users
+     */
+    public function mentionedUsers()
+    {
+        return $this->belongsToMany(User::class, 'mentioned_users', 'message_id', 'user_id');
     }
 }

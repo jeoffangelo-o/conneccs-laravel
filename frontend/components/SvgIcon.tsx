@@ -55,6 +55,13 @@ export const SvgIcon: React.FC<SvgIconProps> = ({ name, size = 24, color = '#000
     trash: { library: 'Ionicons', name: 'trash-outline' },
     edit: { library: 'Ionicons', name: 'create-outline' },
     zap: { library: 'Ionicons', name: 'flash-outline' },
+    paperclip: { library: 'Ionicons', name: 'attach-outline' },
+    smile: { library: 'Ionicons', name: 'happy-outline' },
+    cornerUpLeft: { library: 'Ionicons', name: 'arrow-undo-outline' },
+    x: { library: 'Ionicons', name: 'close-outline' },
+    plus: { library: 'Ionicons', name: 'add-outline' },
+    file: { library: 'Ionicons', name: 'document-outline' },
+    arrowLeft: { library: 'Ionicons', name: 'arrow-back-outline' },
   };
 
   const iconInfo = iconMap[name] || iconMap.grid;

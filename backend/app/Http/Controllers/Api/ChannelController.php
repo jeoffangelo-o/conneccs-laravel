@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\ChannelMessage;
+use App\Models\MessageReaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ChannelController extends Controller
 {
@@ -113,7 +115,7 @@ class ChannelController extends Controller
         }
 
         $query = ChannelMessage::where('channel_id', $id)
-            ->with('user')
+            ->with(['user', 'replyTo.user', 'reactions.user'])
             ->orderBy('created_at', 'desc');
 
         if ($before) {
@@ -123,6 +125,19 @@ class ChannelController extends Controller
         $messages = $query->limit($limit)->get()->reverse()->values();
 
         $formattedMessages = $messages->map(function ($message) use ($user) {
+            // Group reactions by emoji
+            $reactionsGrouped = $message->reactions->groupBy('emoji')->map(function ($reactions, $emoji) use ($user) {
+                return [
+                    'emoji' => $emoji,
+                    'count' => $reactions->count(),
+                    'users' => $reactions->map(fn($r) => [
+                        'id' => $r->user->id,
+                        'name' => $r->user->name,
+                    ])->values(),
+                    'hasReacted' => $reactions->contains('user_id', $user->id),
+                ];
+            })->values();
+
             return [
                 'id' => $message->id,
                 'channelId' => $message->channel_id,
@@ -131,7 +146,15 @@ class ChannelController extends Controller
                 'userEmail' => $message->user->email,
                 'content' => $message->content,
                 'attachments' => $message->attachments,
+                'mentionedUsers' => $message->mentioned_users,
                 'replyToId' => $message->reply_to_id,
+                'replyTo' => $message->replyTo ? [
+                    'id' => $message->replyTo->id,
+                    'userId' => $message->replyTo->user_id,
+                    'userName' => $message->replyTo->user->name,
+                    'content' => $message->replyTo->content,
+                ] : null,
+                'reactions' => $reactionsGrouped,
                 'isPinned' => $message->is_pinned,
                 'isEdited' => $message->is_edited,
                 'editedAt' => $message->edited_at ? $message->edited_at->toISOString() : null,
@@ -157,6 +180,12 @@ class ChannelController extends Controller
             'content' => 'required|string|max:5000',
             'replyToId' => 'nullable|exists:channel_messages,id',
             'attachments' => 'nullable|array',
+            'attachments.*.name' => 'required|string',
+            'attachments.*.url' => 'required|string',
+            'attachments.*.type' => 'required|string',
+            'attachments.*.size' => 'nullable|integer',
+            'mentionedUsers' => 'nullable|array',
+            'mentionedUsers.*' => 'exists:users,id',
         ]);
 
         $channel = Channel::findOrFail($id);
@@ -175,9 +204,10 @@ class ChannelController extends Controller
             'content' => $request->content,
             'reply_to_id' => $request->replyToId,
             'attachments' => $request->attachments,
+            'mentioned_users' => $request->mentionedUsers,
         ]);
 
-        $message->load('user');
+        $message->load(['user', 'replyTo.user']);
 
         return response()->json([
             'success' => true,
@@ -190,7 +220,15 @@ class ChannelController extends Controller
                 'userEmail' => $message->user->email,
                 'content' => $message->content,
                 'attachments' => $message->attachments,
+                'mentionedUsers' => $message->mentioned_users,
                 'replyToId' => $message->reply_to_id,
+                'replyTo' => $message->replyTo ? [
+                    'id' => $message->replyTo->id,
+                    'userId' => $message->replyTo->user_id,
+                    'userName' => $message->replyTo->user->name,
+                    'content' => $message->replyTo->content,
+                ] : null,
+                'reactions' => [],
                 'isPinned' => $message->is_pinned,
                 'isEdited' => $message->is_edited,
                 'createdAt' => $message->created_at->toISOString(),
@@ -360,6 +398,139 @@ class ChannelController extends Controller
                 'isEdited' => true,
                 'editedAt' => $message->edited_at->toISOString(),
             ],
+        ]);
+    }
+
+    /**
+     * Toggle reaction on a message
+     */
+    public function toggleReaction($channelId, $messageId, Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'emoji' => 'required|string|max:10',
+        ]);
+
+        $channel = Channel::findOrFail($channelId);
+
+        // Check if user is a member
+        if (!$channel->members->contains($user->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a member of this channel',
+            ], 403);
+        }
+
+        $message = ChannelMessage::where('channel_id', $channelId)
+            ->where('id', $messageId)
+            ->firstOrFail();
+
+        // Check if reaction exists
+        $reaction = MessageReaction::where('message_id', $messageId)
+            ->where('user_id', $user->id)
+            ->where('emoji', $request->emoji)
+            ->first();
+
+        if ($reaction) {
+            // Remove reaction
+            $reaction->delete();
+            $action = 'removed';
+        } else {
+            // Add reaction
+            MessageReaction::create([
+                'message_id' => $messageId,
+                'user_id' => $user->id,
+                'emoji' => $request->emoji,
+            ]);
+            $action = 'added';
+        }
+
+        // Get updated reactions
+        $reactions = MessageReaction::where('message_id', $messageId)
+            ->with('user')
+            ->get()
+            ->groupBy('emoji')
+            ->map(function ($reactions, $emoji) use ($user) {
+                return [
+                    'emoji' => $emoji,
+                    'count' => $reactions->count(),
+                    'users' => $reactions->map(fn($r) => [
+                        'id' => $r->user->id,
+                        'name' => $r->user->name,
+                    ])->values(),
+                    'hasReacted' => $reactions->contains('user_id', $user->id),
+                ];
+            })->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Reaction {$action} successfully",
+            'data' => [
+                'messageId' => $messageId,
+                'reactions' => $reactions,
+            ],
+        ]);
+    }
+
+    /**
+     * Upload file attachment
+     */
+    public function uploadAttachment(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240', // 10MB max
+        ]);
+
+        $user = Auth::user();
+        $file = $request->file('file');
+
+        // Generate unique filename
+        $filename = time() . '_' . $user->id . '_' . $file->getClientOriginalName();
+        
+        // Store file in public storage
+        $path = $file->storeAs('attachments', $filename, 'public');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'File uploaded successfully',
+            'data' => [
+                'name' => $file->getClientOriginalName(),
+                'url' => Storage::url($path),
+                'type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get channel members for mentions
+     */
+    public function getMembers($id)
+    {
+        $user = Auth::user();
+        $channel = Channel::findOrFail($id);
+
+        // Check if user is a member
+        if (!$channel->members->contains($user->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a member of this channel',
+            ], 403);
+        }
+
+        $members = $channel->members->map(function ($member) {
+            return [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'role' => $member->pivot->role,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $members,
         ]);
     }
 }
