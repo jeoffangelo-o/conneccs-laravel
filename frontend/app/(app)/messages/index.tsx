@@ -10,6 +10,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
@@ -25,7 +27,9 @@ export default function MessagesScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
-  const styles = createStyles(colors);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const styles = createStyles(colors, isMobile);
   const scrollViewRef = useRef<ScrollView>(null);
   
   const [loading, setLoading] = useState(true);
@@ -36,6 +40,7 @@ export default function MessagesScreen() {
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sending, setSending] = useState(false);
+  const [showChannelsList, setShowChannelsList] = useState(false);
 
   useEffect(() => {
     loadChannels();
@@ -44,6 +49,9 @@ export default function MessagesScreen() {
   useEffect(() => {
     if (selectedChannel) {
       loadMessages(selectedChannel.id);
+      if (isMobile) {
+        setShowChannelsList(false);
+      }
     }
   }, [selectedChannel]);
 
@@ -51,7 +59,8 @@ export default function MessagesScreen() {
     try {
       setLoading(true);
       const response = await apiService.get('/channels');
-      const channelsData = response.data || [];
+      // Ensure we always have an array
+      const channelsData = Array.isArray(response.data) ? response.data : [];
       setChannels(channelsData);
       
       // Auto-select first channel
@@ -69,7 +78,9 @@ export default function MessagesScreen() {
   const loadMessages = async (channelId: string) => {
     try {
       const response = await apiService.get(`/channels/${channelId}/messages`);
-      setMessages(response.data || []);
+      // Ensure we always have an array
+      const messagesData = Array.isArray(response.data) ? response.data : [];
+      setMessages(messagesData);
       
       // Scroll to bottom after loading
       setTimeout(() => {
@@ -161,11 +172,13 @@ export default function MessagesScreen() {
     return date.toLocaleDateString();
   };
 
-  const filteredChannels = channels.filter(channel =>
-    searchQuery.trim() === '' ||
-    channel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    channel.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredChannels = Array.isArray(channels) 
+    ? channels.filter(channel =>
+        searchQuery.trim() === '' ||
+        channel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        channel.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   const getChannelIcon = (type: string) => {
     switch (type) {
@@ -212,14 +225,25 @@ export default function MessagesScreen() {
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.searchButton}>
-          <SvgIcon name="search" size={20} color={colors.text2} />
-        </TouchableOpacity>
+        <View style={styles.topbarActions}>
+          {isMobile && (
+            <TouchableOpacity 
+              style={styles.channelsButton}
+              onPress={() => setShowChannelsList(true)}
+            >
+              <SvgIcon name="messageCircle" size={20} color={colors.text2} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.searchButton}>
+            <SvgIcon name="search" size={20} color={colors.text2} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.messengerContainer}>
-        {/* Channels Sidebar */}
-        <View style={styles.channelsSidebar}>
+        {/* Channels Sidebar - Desktop */}
+        {!isMobile && (
+          <View style={styles.channelsSidebar}>
           {/* Search */}
           <View style={styles.channelsSearch}>
             <SvgIcon name="search" size={16} color={colors.text3} />
@@ -294,12 +318,115 @@ export default function MessagesScreen() {
             )}
           </ScrollView>
         </View>
+        )}
+
+        {/* Channels Sidebar - Mobile Modal */}
+        {isMobile && (
+          <Modal
+            visible={showChannelsList}
+            animationType="slide"
+            transparent={false}
+            onRequestClose={() => setShowChannelsList(false)}
+          >
+            <View style={[styles.container, { paddingTop: 48 }]}>
+              {/* Modal Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalHeaderTitle}>Channels</Text>
+                <TouchableOpacity onPress={() => setShowChannelsList(false)}>
+                  <SvgIcon name="x" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Search */}
+              <View style={styles.channelsSearch}>
+                <SvgIcon name="search" size={16} color={colors.text3} />
+                <TextInput
+                  style={styles.channelsSearchInput}
+                  placeholder="Search channels..."
+                  placeholderTextColor={colors.text3}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+
+              {/* Channels List */}
+              <ScrollView
+                style={styles.channelsList}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+                }
+              >
+                {filteredChannels.length === 0 ? (
+                  <View style={styles.noChannels}>
+                    <Text style={styles.noChannelsText}>No channels found</Text>
+                  </View>
+                ) : (
+                  filteredChannels.map((channel) => (
+                    <TouchableOpacity
+                      key={channel.id}
+                      style={[
+                        styles.channelItem,
+                        selectedChannel?.id === channel.id && styles.channelItemActive,
+                      ]}
+                      onPress={() => handleSelectChannel(channel)}
+                    >
+                      <View style={[
+                        styles.channelIcon,
+                        selectedChannel?.id === channel.id && styles.channelIconActive
+                      ]}>
+                        <SvgIcon 
+                          name={getChannelIcon(channel.type)} 
+                          size={20} 
+                          color={selectedChannel?.id === channel.id ? '#fff' : colors.text2} 
+                        />
+                      </View>
+                      <View style={styles.channelInfo}>
+                        <View style={styles.channelHeader}>
+                          <Text style={[
+                            styles.channelName,
+                            selectedChannel?.id === channel.id && styles.channelNameActive
+                          ]} numberOfLines={1}>
+                            {channel.name}
+                          </Text>
+                          {channel.lastMessageAt && (
+                            <Text style={styles.channelTime}>
+                              {formatChannelTime(channel.lastMessageAt)}
+                            </Text>
+                          )}
+                        </View>
+                        {channel.lastMessage && (
+                          <Text style={styles.channelLastMessage} numberOfLines={1}>
+                            {channel.lastMessage}
+                          </Text>
+                        )}
+                      </View>
+                      {channel.unreadCount > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>{channel.unreadCount}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </Modal>
+        )}
 
         {/* Chat Area */}
         {selectedChannel ? (
           <View style={styles.chatArea}>
             {/* Chat Header */}
             <View style={styles.chatHeader}>
+              {isMobile && (
+                <TouchableOpacity 
+                  style={styles.backButton}
+                  onPress={() => setShowChannelsList(true)}
+                >
+                  <SvgIcon name="arrowLeft" size={20} color={colors.text2} />
+                </TouchableOpacity>
+              )}
               <View style={styles.chatHeaderLeft}>
                 <View style={styles.chatHeaderIcon}>
                   <SvgIcon 
@@ -432,20 +559,22 @@ export default function MessagesScreen() {
             </View>
           </View>
         ) : (
-          <View style={styles.noChannelSelected}>
-            <SvgIcon name="messageCircle" size={64} color={colors.text3} />
-            <Text style={styles.noChannelTitle}>Select a channel</Text>
-            <Text style={styles.noChannelText}>
-              Choose a channel from the sidebar to start messaging
-            </Text>
-          </View>
+          !isMobile && (
+            <View style={styles.noChannelSelected}>
+              <SvgIcon name="messageCircle" size={64} color={colors.text3} />
+              <Text style={styles.noChannelTitle}>Select a channel</Text>
+              <Text style={styles.noChannelText}>
+                Choose a channel from the sidebar to start messaging
+              </Text>
+            </View>
+          )
         )}
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -462,7 +591,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.bg2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingHorizontal: 24,
+    paddingHorizontal: isMobile ? 16 : 24,
     paddingVertical: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -488,6 +617,18 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text3,
     marginTop: 2,
   },
+  topbarActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  channelsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bg3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchButton: {
     width: 40,
     height: 40,
@@ -500,11 +641,27 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  // Modal Header (Mobile)
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.bg2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
   // Channels Sidebar
   channelsSidebar: {
-    width: 280,
+    width: isMobile ? '100%' : 280,
     backgroundColor: colors.bg2,
-    borderRightWidth: 1,
+    borderRightWidth: isMobile ? 0 : 1,
     borderRightColor: colors.border,
   },
   channelsSearch: {
@@ -612,10 +769,19 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     backgroundColor: colors.bg2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: 12,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.bg3,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chatHeaderLeft: {
     flexDirection: 'row',
@@ -704,7 +870,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#fff',
   },
   messageBubbleContainer: {
-    maxWidth: '70%',
+    maxWidth: isMobile ? '80%' : '70%',
   },
   messageBubbleContainerMine: {
     alignItems: 'flex-end',
@@ -750,7 +916,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   // Message Input
   messageInputContainer: {
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     backgroundColor: colors.bg2,
     borderTopWidth: 1,
     borderTopColor: colors.border,

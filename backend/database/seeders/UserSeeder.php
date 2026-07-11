@@ -25,7 +25,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Dean Onesa',
                 'first_name' => 'Dean',
                 'last_name' => 'Onesa',
-                'email' => 'dean@ccs.edu',
+                'email' => 'dean.onesa@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'DEAN',
                 'department' => 'Computer Science',
@@ -40,7 +40,7 @@ class UserSeeder extends Seeder
                 'name' => 'Ms. Secretary Admin',
                 'first_name' => 'Secretary',
                 'last_name' => 'Admin',
-                'email' => 'secretary@ccs.edu',
+                'email' => 'secretary.admin@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'SECRETARY',
                 'department' => 'Computer Science',
@@ -55,7 +55,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Chair Colle',
                 'first_name' => 'Chair',
                 'last_name' => 'Colle',
-                'email' => 'chair.colle@ccs.edu',
+                'email' => 'chair.colle@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'CHAIR',
                 'department' => 'Computer Science',
@@ -68,7 +68,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Chair Benitez',
                 'first_name' => 'Chair',
                 'last_name' => 'Benitez',
-                'email' => 'chair.benitez@ccs.edu',
+                'email' => 'chair.benitez@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'CHAIR',
                 'department' => 'Information Technology',
@@ -78,12 +78,12 @@ class UserSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // Faculty Members
+            // Faculty Members (using @cspc.edu.ph for faculty/staff)
             [
                 'name' => 'Dr. John Benosa',
                 'first_name' => 'John',
                 'last_name' => 'Benosa',
-                'email' => 'john.benosa@ccs.edu',
+                'email' => 'john.benosa@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -96,7 +96,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Maria Colle',
                 'first_name' => 'Maria',
                 'last_name' => 'Colle',
-                'email' => 'maria.colle@ccs.edu',
+                'email' => 'maria.colle@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -109,7 +109,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Mark Omorog',
                 'first_name' => 'Mark',
                 'last_name' => 'Omorog',
-                'email' => 'mark.omorog@ccs.edu',
+                'email' => 'mark.omorog@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -122,7 +122,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Ana Pandes',
                 'first_name' => 'Ana',
                 'last_name' => 'Pandes',
-                'email' => 'ana.pandes@ccs.edu',
+                'email' => 'ana.pandes@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Information Technology',
@@ -135,7 +135,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Luis Mortel',
                 'first_name' => 'Luis',
                 'last_name' => 'Mortel',
-                'email' => 'luis.mortel@ccs.edu',
+                'email' => 'luis.mortel@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -148,7 +148,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Sarah Prianes',
                 'first_name' => 'Sarah',
                 'last_name' => 'Prianes',
-                'email' => 'sarah.prianes@ccs.edu',
+                'email' => 'sarah.prianes@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Information Technology',
@@ -161,7 +161,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Robert Onate',
                 'first_name' => 'Robert',
                 'last_name' => 'Onate',
-                'email' => 'robert.onate@ccs.edu',
+                'email' => 'robert.onate@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -174,7 +174,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Jennifer Serrano',
                 'first_name' => 'Jennifer',
                 'last_name' => 'Serrano',
-                'email' => 'jennifer.serrano@ccs.edu',
+                'email' => 'jennifer.serrano@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Information Technology',
@@ -187,7 +187,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Michael Bagaporo',
                 'first_name' => 'Michael',
                 'last_name' => 'Bagaporo',
-                'email' => 'michael.bagaporo@ccs.edu',
+                'email' => 'michael.bagaporo@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -200,7 +200,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Karen Fortuno',
                 'first_name' => 'Karen',
                 'last_name' => 'Fortuno',
-                'email' => 'karen.fortuno@ccs.edu',
+                'email' => 'karen.fortuno@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Information Technology',
@@ -213,7 +213,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. David Prades',
                 'first_name' => 'David',
                 'last_name' => 'Prades',
-                'email' => 'david.prades@ccs.edu',
+                'email' => 'david.prades@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -226,7 +226,7 @@ class UserSeeder extends Seeder
                 'name' => 'Prof. Emma Lipata',
                 'first_name' => 'Emma',
                 'last_name' => 'Lipata',
-                'email' => 'emma.lipata@ccs.edu',
+                'email' => 'emma.lipata@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'FACULTY',
                 'department' => 'Information Technology',
@@ -241,7 +241,7 @@ class UserSeeder extends Seeder
                 'name' => 'Dr. Coordinator Santos',
                 'first_name' => 'Coordinator',
                 'last_name' => 'Santos',
-                'email' => 'coordinator@ccs.edu',
+                'email' => 'coordinator.santos@cspc.edu.ph',
                 'password' => Hash::make('password123'),
                 'role' => 'COORDINATOR',
                 'department' => 'Computer Science',
@@ -251,12 +251,12 @@ class UserSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // Test User (for easy login)
+            // Test User (using @my.cspc.edu.ph for student-like accounts)
             [
                 'name' => 'Test User',
                 'first_name' => 'Test',
                 'last_name' => 'User',
-                'email' => 'test@ccs.edu',
+                'email' => 'test.user@my.cspc.edu.ph',
                 'password' => Hash::make('password'),
                 'role' => 'FACULTY',
                 'department' => 'Computer Science',
@@ -274,13 +274,13 @@ class UserSeeder extends Seeder
 
         $this->command->info('✅ Created ' . count($users) . ' test users');
         $this->command->info('');
-        $this->command->info('📧 Test Accounts:');
-        $this->command->info('   Dean:        dean@ccs.edu / password123');
-        $this->command->info('   Secretary:   secretary@ccs.edu / password123');
-        $this->command->info('   Chair:       chair.colle@ccs.edu / password123');
-        $this->command->info('   Faculty:     john.benosa@ccs.edu / password123');
-        $this->command->info('   Test User:   test@ccs.edu / password');
+        $this->command->info('📧 Test Accounts (All passwords: password123):');
+        $this->command->info('   Dean:        dean.onesa@cspc.edu.ph');
+        $this->command->info('   Secretary:   secretary.admin@cspc.edu.ph');
+        $this->command->info('   Chair:       chair.colle@cspc.edu.ph');
+        $this->command->info('   Faculty:     john.benosa@cspc.edu.ph');
+        $this->command->info('   Test User:   test.user@my.cspc.edu.ph (password: password)');
         $this->command->info('');
-        $this->command->info('💡 All passwords are: password123 (except Test User: password)');
+        $this->command->info('💡 All accounts use @cspc.edu.ph or @my.cspc.edu.ph domains');
     }
 }
