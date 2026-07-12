@@ -209,6 +209,20 @@ class ChannelController extends Controller
 
         $message->load(['user', 'replyTo.user']);
 
+        // Create notifications for mentioned users
+        if ($request->mentionedUsers && count($request->mentionedUsers) > 0) {
+            foreach ($request->mentionedUsers as $mentionedUserId) {
+                if ($mentionedUserId != $user->id) { // Don't notify yourself
+                    \App\Models\Notification::createMessageMention(
+                        $mentionedUserId,
+                        $id,
+                        $user->name,
+                        $channel->name
+                    );
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Message sent successfully',

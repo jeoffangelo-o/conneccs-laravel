@@ -31,6 +31,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->command->info('');
+        
+        // Seed notifications (requires users to exist)
+        $this->call([
+            NotificationSeeder::class,
+        ]);
+
+        $this->command->info('');
         $this->command->info('✅ Database seeding completed!');
         $this->command->info('🚀 You can now login with any of the test accounts listed above');
     }

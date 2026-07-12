@@ -23,12 +23,16 @@ return new class extends Migration
                 'IPCR_INCOMPLETE',
                 'IPCR_OVERRIDE',
                 'MESSAGE_RECEIVED',
+                'MESSAGE_MENTION',
+                'MESSAGE_REPLY',
                 'REPORTORIAL_DUE',
                 'REPORTORIAL_SUBMITTED',
                 'ANNOUNCEMENT_POSTED',
                 'SYSTEM_ANNOUNCEMENT',
                 'TARGET_DEADLINE',
-                'ACCOMPLISHMENT_DEADLINE'
+                'ACCOMPLISHMENT_DEADLINE',
+                'CHANNEL_ADDED',
+                'DOCUMENT_SHARED'
             ]);
             $table->string('title');
             $table->text('message');
