@@ -248,6 +248,26 @@ export default function OPCRPreviewScreen() {
               {parsedData.debug && (
                 <View style={styles.parsedCard}>
                   <Text style={styles.parsedCardTitle}>Debug Information</Text>
+                  
+                  {/* Parser Info */}
+                  {parsedData.parser_used && (
+                    <View style={[styles.parsedRow, { 
+                      backgroundColor: parsedData.parser_used === 'ocr' ? colors.green + '20' : colors.orange + '20',
+                      padding: 12,
+                      borderRadius: 8,
+                      marginBottom: 12
+                    }]}>
+                      <Text style={styles.parsedLabel}>Parser Used:</Text>
+                      <Text style={[styles.parsedValue, {
+                        color: parsedData.parser_used === 'ocr' ? colors.green : colors.orange,
+                        fontWeight: '700'
+                      }]}>
+                        {parsedData.parser_name || parsedData.parser_used.toUpperCase()}
+                        {parsedData.parser_used === 'ocr' ? ' ✓' : ' (Fallback)'}
+                      </Text>
+                    </View>
+                  )}
+                  
                   <View style={styles.parsedRow}>
                     <Text style={styles.parsedLabel}>Raw Text Length:</Text>
                     <Text style={styles.parsedValue}>{parsedData.debug.raw_text_length}</Text>

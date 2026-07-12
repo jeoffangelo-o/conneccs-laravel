@@ -225,10 +225,8 @@ class OPCRTableExtractor:
             all_mfos = []
             all_targets = []
             
-            # Process each page
+            # Process each page (NO print statements - causes JSON parsing errors)
             for page_num, image in enumerate(images, start=1):
-                print(f"Processing page {page_num}/{len(images)}...", file=sys.stderr)
-                
                 # Extract text with layout
                 rows = self.extract_text_with_layout(image)
                 

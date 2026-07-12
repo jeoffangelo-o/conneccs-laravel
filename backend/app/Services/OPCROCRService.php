@@ -19,6 +19,11 @@ class OPCROCRService
         // Try to find Python executable
         $this->pythonPath = $this->findPython();
         $this->scriptPath = base_path('scripts/extract_opcr_tables.py');
+        
+        Log::info('OPCROCRService initialized', [
+            'python_path' => $this->pythonPath,
+            'script_path' => $this->scriptPath,
+        ]);
     }
     
     /**
@@ -27,12 +32,13 @@ class OPCROCRService
     private function findPython(): string
     {
         $possiblePaths = [
+            base_path('venv\\Scripts\\python.exe'),  // Virtual environment (try this FIRST!)
             'python',  // If in PATH
             'python3',
+            'C:\\Python314\\python.exe',
             'C:\\Python311\\python.exe',
             'C:\\Python310\\python.exe',
             'C:\\Python39\\python.exe',
-            base_path('venv\\Scripts\\python.exe'),  // Virtual environment
         ];
         
         foreach ($possiblePaths as $path) {
@@ -57,17 +63,19 @@ class OPCROCRService
             return false;
         }
         
-        // Try to run test script
-        $testScript = base_path('scripts/test_ocr.py');
-        if (file_exists($testScript)) {
-            $command = "\"{$this->pythonPath}\" \"$testScript\" 2>&1";
-            $output = shell_exec($command);
-            
-            Log::debug('OCR test output', ['output' => $output]);
-            
-            return $output && stripos($output, 'setup complete') !== false;
+        // Simple check: just verify Python and the script exist
+        $result = shell_exec("\"{$this->pythonPath}\" --version 2>&1");
+        $pythonAvailable = $result && stripos($result, 'python') !== false;
+        
+        if ($pythonAvailable) {
+            Log::info('OCR is available', [
+                'python' => $this->pythonPath,
+                'script' => $this->scriptPath
+            ]);
+            return true;
         }
         
+        Log::warning('Python not available for OCR');
         return false;
     }
     
@@ -87,6 +95,9 @@ class OPCROCRService
         if (!file_exists($this->scriptPath)) {
             throw new Exception("OCR script not found. Please run: composer install");
         }
+        
+        // Increase PHP execution time for large PDFs
+        set_time_limit(300); // 5 minutes
         
         Log::info('Starting OCR extraction', [
             'pdf_path' => $pdfPath,
@@ -111,14 +122,29 @@ class OPCROCRService
             throw new Exception('Failed to execute OCR script. Check Python installation.');
         }
         
-        Log::debug('OCR script output', ['output' => substr($output, 0, 500)]);
+        // Clean output: remove any stderr messages before JSON
+        $output = trim($output);
+        
+        // Find the JSON start (should be { or [)
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false && $jsonStart > 0) {
+            // There's content before the JSON, skip it
+            $output = substr($output, $jsonStart);
+        }
+        
+        Log::debug('OCR script raw output', [
+            'length' => strlen($output),
+            'first_100' => substr($output, 0, 100),
+            'last_100' => substr($output, -100)
+        ]);
         
         // Parse JSON output
         $result = json_decode($output, true);
         
         if ($result === null) {
             Log::error('Failed to parse OCR output', [
-                'output' => $output,
+                'output_length' => strlen($output),
+                'output_sample' => substr($output, 0, 1000),
                 'json_error' => json_last_error_msg(),
             ]);
             throw new Exception('Failed to parse OCR output: ' . json_last_error_msg());

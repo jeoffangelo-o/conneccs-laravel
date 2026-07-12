@@ -92,8 +92,8 @@ class OPCRUploadController extends Controller
                 $timestamp
             );
 
-            // Store the file in opcr directory (not private)
-            $filePath = $file->storeAs('opcr', $fileName, 'local');
+            // Store the file in opcr directory
+            $filePath = $file->storeAs('opcr', $fileName);
             $fullPath = Storage::path($filePath);
 
             Log::info('OPCR file stored', [
@@ -418,27 +418,29 @@ class OPCRUploadController extends Controller
                 'first_page_sample' => isset($pages[0]) ? substr($pages[0]['text'], 0, 1000) : 'No pages',
             ]);
             
-            // Try OCR extraction first (if available)
-            if ($this->ocrService->isAvailable()) {
-                Log::info('Using OCR-based table extraction');
+            // Force using OCR extraction (skip availability check for now)
+            Log::info('Attempting OCR extraction');
+            
+            $parserUsed = 'text'; // Default
+            
+            try {
+                $parsedData = $this->ocrService->extractTables($fullPath);
+                $parserUsed = 'ocr';
+                Log::info('OCR extraction successful!');
+            } catch (\Exception $e) {
+                Log::warning('OCR extraction failed, falling back to text parser', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 
-                try {
-                    $parsedData = $this->ocrService->extractTables($fullPath);
-                } catch (\Exception $e) {
-                    Log::warning('OCR extraction failed, falling back to text parser', [
-                        'error' => $e->getMessage()
-                    ]);
-                    
-                    // Fallback to text-based parser
-                    $parsedData = $this->opcrParser->parseComplete($rawText, $pages);
-                }
-            } else {
-                Log::info('OCR not available, using text-based parser');
-                Log::info('To enable OCR: ' . $this->ocrService->getInstallInstructions());
-                
-                // Use text-based parser
+                // Fallback to text-based parser
                 $parsedData = $this->opcrParser->parseComplete($rawText, $pages);
+                $parserUsed = 'text';
             }
+            
+            // Add parser info to response
+            $parsedData['parser_used'] = $parserUsed;
+            $parsedData['parser_name'] = $parserUsed === 'ocr' ? 'OCR (Tesseract)' : 'Text Extraction';
             
             // Clean all string values in parsed data
             $parsedData = $this->cleanArrayRecursive($parsedData);

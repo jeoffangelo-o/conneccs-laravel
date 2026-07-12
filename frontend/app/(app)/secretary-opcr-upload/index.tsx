@@ -94,7 +94,7 @@ export default function SecretaryOPCRUploadScreen() {
       console.log('Fetching uploaded files...');
       console.log('Token present:', !!token);
       
-      const response = await axios.get(`${API_URL}/api/opcr/files`, {
+      const response = await axios.get(`${API_URL}/api/opcr/list`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -310,10 +310,10 @@ export default function SecretaryOPCRUploadScreen() {
       
       try {
         console.log('Deleting file:', fileName);
-        console.log('Delete URL:', `${API_URL}/api/opcr/files/${fileName}`);
+        console.log('Delete URL:', `${API_URL}/api/opcr/${fileName}`);
         
         const response = await axios.delete(
-          `${API_URL}/api/opcr/files/${fileName}`,
+          `${API_URL}/api/opcr/${fileName}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -350,7 +350,7 @@ export default function SecretaryOPCRUploadScreen() {
                 console.log('Deleting file:', fileName);
                 
                 const response = await axios.delete(
-                  `${API_URL}/api/opcr/files/${fileName}`,
+                  `${API_URL}/api/opcr/${fileName}`,
                   {
                     headers: {
                       Authorization: `Bearer ${token}`,
