@@ -28,6 +28,13 @@ class OPCRUploadController extends Controller
     public function upload(Request $request)
     {
         try {
+            Log::info('OPCR upload request received', [
+                'headers' => $request->headers->all(),
+                'has_file' => $request->hasFile('file'),
+                'all_inputs' => $request->except(['file']),
+                'files' => $request->allFiles(),
+            ]);
+
             // Validate the request
             $validator = Validator::make($request->all(), [
                 'file' => 'required|file|mimes:pdf|max:10240', // Max 10MB
@@ -36,6 +43,10 @@ class OPCRUploadController extends Controller
             ]);
 
             if ($validator->fails()) {
+                Log::error('OPCR upload validation failed', [
+                    'errors' => $validator->errors()->toArray(),
+                ]);
+                
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
@@ -54,10 +65,11 @@ class OPCRUploadController extends Controller
                 'period' => $period,
                 'file_name' => $file->getClientOriginalName(),
                 'file_size' => $file->getSize(),
+                'file_mime' => $file->getMimeType(),
                 'user_id' => auth()->id(),
             ]);
 
-            // Generate unique filename
+            // Store the file
             $timestamp = now()->format('YmdHis');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $fileName = sprintf(
@@ -67,7 +79,7 @@ class OPCRUploadController extends Controller
                 $timestamp
             );
 
-            // Store the file
+            // Store the file in opcr directory (not private)
             $filePath = $file->storeAs('opcr', $fileName, 'local');
             $fullPath = Storage::path($filePath);
 

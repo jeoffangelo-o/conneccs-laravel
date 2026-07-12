@@ -32,7 +32,7 @@ interface UploadedFile {
   period: string | null;
 }
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.8:8000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.15:8000';
 
 // Generate years from 2020 to current year + 5
 const generateYears = () => {
@@ -62,6 +62,7 @@ export default function SecretaryOPCRUploadScreen() {
   const [loadingFiles, setLoadingFiles] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
   
   const years = generateYears();
 
@@ -124,13 +125,24 @@ export default function SecretaryOPCRUploadScreen() {
       const result = await DocumentPicker.getDocumentAsync({
         type: 'application/pdf',
         copyToCacheDirectory: true,
+        multiple: false,
       });
 
+      console.log('Document picker result:', result);
+
       if (result.canceled) {
+        console.log('Document picker was canceled');
         return;
       }
 
       const file = result.assets[0];
+      
+      console.log('Selected file details:', {
+        name: file.name,
+        uri: file.uri,
+        size: file.size,
+        mimeType: file.mimeType,
+      });
       
       // Check file size (max 10MB)
       if (file.size && file.size > 10 * 1024 * 1024) {
@@ -139,6 +151,9 @@ export default function SecretaryOPCRUploadScreen() {
       }
 
       setSelectedFile(file);
+      
+      // Set preview URI for PDF
+      setPreviewUri(file.uri);
     } catch (error) {
       console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document');
@@ -166,56 +181,92 @@ export default function SecretaryOPCRUploadScreen() {
       setUploadProgress(0);
 
       console.log('Starting upload...');
-      console.log('API URL:', `${API_URL}/api/opcr/upload`);
-      console.log('Token present:', !!token);
-      console.log('File:', {
-        name: selectedFile.name,
-        uri: selectedFile.uri,
-        size: selectedFile.size,
+      console.log('File info:', selectedFile);
+
+      // Fetch the file as a blob
+      console.log('Fetching file as blob...');
+      const response = await fetch(selectedFile.uri);
+      const blob = await response.blob();
+      
+      console.log('Blob created:', {
+        size: blob.size,
+        type: blob.type,
       });
 
+      // Create FormData with the blob
       const formData = new FormData();
-      
-      // Add file to FormData
-      const fileToUpload: any = {
-        uri: selectedFile.uri,
-        type: 'application/pdf',
-        name: selectedFile.name,
-      };
-      
-      formData.append('file', fileToUpload);
+      formData.append('file', blob, selectedFile.name);
       formData.append('college_name', 'College of Computer Studies');
       formData.append('year', year);
       formData.append('period', period);
 
       console.log('FormData created, making request...');
 
-      const response = await axios.post(
-        `${API_URL}/api/opcr/upload`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
-          onUploadProgress: (progressEvent) => {
-            const progress = progressEvent.total
-              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-              : 0;
-            console.log('Upload progress:', progress);
-            setUploadProgress(progress);
-          },
+      const xhr = new XMLHttpRequest();
+      
+      // Setup upload progress tracking
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded * 100) / event.total);
+          console.log('Upload progress:', progress);
+          setUploadProgress(progress);
         }
-      );
+      });
 
-      console.log('Upload response:', response.data);
+      // Setup response handlers
+      const uploadPromise = new Promise((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          console.log('Upload complete, status:', xhr.status);
+          console.log('Response:', xhr.responseText);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (e) {
+              reject(new Error('Invalid JSON response'));
+            }
+          } else {
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              reject(errorResponse);
+            } catch (e) {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        });
 
-      if (response.data.success) {
+        xhr.addEventListener('error', () => {
+          console.error('XHR error');
+          reject(new Error('Network error occurred'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          console.error('XHR aborted');
+          reject(new Error('Upload was aborted'));
+        });
+      });
+
+      // Open and send request
+      xhr.open('POST', `${API_URL}/api/opcr/upload`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('Accept', 'application/json');
+      // Don't set Content-Type - let browser set it with boundary
+      xhr.send(formData);
+
+      const uploadResponse: any = await uploadPromise;
+
+      console.log('Upload response:', uploadResponse);
+
+      if (uploadResponse.success) {
+        // Refresh file list immediately
+        await fetchUploadedFiles();
+        
         Alert.alert(
           'Success',
           `OPCR uploaded successfully!\n\n` +
-          `Pages: ${response.data.data.extraction.total_pages}\n` +
-          `Text extracted: ${response.data.data.extraction.text_length} characters`,
+          `Pages: ${uploadResponse.data.extraction.total_pages}\n` +
+          `Text extracted: ${uploadResponse.data.extraction.text_length} characters`,
           [
             {
               text: 'OK',
@@ -224,31 +275,22 @@ export default function SecretaryOPCRUploadScreen() {
                 setSelectedFile(null);
                 setYear(new Date().getFullYear().toString());
                 setPeriod('MIDYEAR');
-                
-                // Refresh file list
-                fetchUploadedFiles();
               },
             },
           ]
         );
+      } else {
+        throw new Error(uploadResponse.message || 'Upload failed');
       }
     } catch (error: any) {
-      console.error('Upload error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        headers: error.response?.headers,
-      });
+      console.error('Upload error:', error);
       
       let errorMessage = 'Failed to upload OPCR';
       
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        errorMessage = Object.values(errors).flat().join('\n');
-      } else if (error.message) {
+      if (error.message) {
         errorMessage = error.message;
+      } else if (error.errors) {
+        errorMessage = Object.values(error.errors).flat().join('\n');
       }
       
       Alert.alert('Upload Error', errorMessage);
@@ -279,8 +321,9 @@ export default function SecretaryOPCRUploadScreen() {
               );
 
               if (response.data.success) {
+                // Refresh list immediately after deletion
+                await fetchUploadedFiles();
                 Alert.alert('Success', 'File deleted successfully');
-                fetchUploadedFiles();
               }
             } catch (error: any) {
               console.error('Delete error:', error);
@@ -305,6 +348,51 @@ export default function SecretaryOPCRUploadScreen() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  };
+
+  const viewFile = (fileName: string) => {
+    // For web, open the download URL with authorization
+    const fileUrl = `${API_URL}/api/opcr/download/${fileName}`;
+    
+    if (Platform.OS === 'web') {
+      // Create a temporary link and click it to trigger download
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.target = '_blank';
+      // Add auth header via fetch and create blob URL
+      fetch(fileUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        })
+        .catch(error => {
+          console.error('Download error:', error);
+          Alert.alert('Error', 'Failed to download file');
+        });
+    } else {
+      // For mobile
+      Alert.alert('View File', `Opening ${fileName}`, [
+        {
+          text: 'OK',
+          onPress: () => {
+            console.log('Open file:', fileUrl);
+          },
+        },
+      ]);
+    }
+  };
     });
   };
 
@@ -363,10 +451,35 @@ export default function SecretaryOPCRUploadScreen() {
           {selectedFile && (
             <View style={styles.selectedFileInfo}>
               <SvgIcon name="fileText" size={20} color={colors.text2} />
-              <Text style={styles.fileName}>{selectedFile.name}</Text>
-              <Text style={styles.fileSize}>
-                {formatFileSize(selectedFile.size || 0)}
-              </Text>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.fileName}>{selectedFile.name}</Text>
+                <Text style={styles.fileSize}>
+                  {formatFileSize(selectedFile.size || 0)}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedFile(null);
+                  setPreviewUri(null);
+                }}
+                style={{ padding: 4 }}
+              >
+                <SvgIcon name="x" size={18} color={colors.text3} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* PDF Preview */}
+          {previewUri && (
+            <View style={styles.previewContainer}>
+              <Text style={styles.previewTitle}>PDF Preview</Text>
+              <View style={styles.previewBox}>
+                <SvgIcon name="fileText" size={48} color={colors.accent} />
+                <Text style={styles.previewText}>PDF file selected</Text>
+                <Text style={styles.previewSubtext}>
+                  Preview will be available after upload
+                </Text>
+              </View>
             </View>
           )}
 
@@ -477,15 +590,23 @@ export default function SecretaryOPCRUploadScreen() {
                       {file.college_name} • {file.year} • {file.period}
                     </Text>
                     <Text style={styles.fileCardDate}>
-                      {formatDate(file.uploaded_at)}
+                      {formatDate(file.uploaded_at)} • {formatFileSize(file.size)}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => deleteFile(file.file_name)}
-                  >
-                    <SvgIcon name="trash" size={20} color={colors.red} />
-                  </TouchableOpacity>
+                  <View style={styles.fileActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => viewFile(file.file_name)}
+                    >
+                      <SvgIcon name="eye" size={20} color={colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => deleteFile(file.file_name)}
+                    >
+                      <SvgIcon name="trash" size={20} color={colors.red} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             ))
@@ -625,12 +746,40 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
     marginBottom: 16,
   },
   fileName: {
-    flex: 1,
-    marginLeft: 8,
     fontSize: 13,
     color: colors.text,
+    marginBottom: 2,
   },
   fileSize: {
+    fontSize: 12,
+    color: colors.text3,
+  },
+  previewContainer: {
+    marginBottom: 16,
+  },
+  previewTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text2,
+    marginBottom: 8,
+  },
+  previewBox: {
+    padding: 32,
+    backgroundColor: colors.bg3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  previewSubtext: {
+    marginTop: 4,
     fontSize: 12,
     color: colors.text3,
   },
@@ -770,6 +919,13 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
   fileCardDate: {
     fontSize: 11,
     color: colors.text3,
+  },
+  fileActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
   },
   deleteButton: {
     padding: 8,
