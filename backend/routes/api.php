@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('opcr')->group(function () {
         Route::post('/upload', [OPCRUploadController::class, 'upload']);
         Route::get('/files', [OPCRUploadController::class, 'index']);
+        Route::get('/preview/{fileName}', [OPCRUploadController::class, 'preview']);
         Route::get('/download/{fileName}', [OPCRUploadController::class, 'download']);
         Route::delete('/files/{fileName}', [OPCRUploadController::class, 'destroy']);
     });

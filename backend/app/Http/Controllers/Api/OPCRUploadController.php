@@ -285,6 +285,77 @@ class OPCRUploadController extends Controller
     }
 
     /**
+     * Get extracted text preview for a file
+     *
+     * @param string $fileName
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function preview(string $fileName)
+    {
+        try {
+            $filePath = 'opcr/' . $fileName;
+            
+            if (!Storage::exists($filePath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'OPCR file not found',
+                ], 404);
+            }
+
+            $fullPath = Storage::path($filePath);
+            
+            // Get raw text
+            $rawTextFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_raw.txt';
+            $rawTextPath = storage_path('app/opcr/raw-text/' . $rawTextFileName);
+            
+            $rawText = '';
+            if (file_exists($rawTextPath)) {
+                $rawText = file_get_contents($rawTextPath);
+            }
+            
+            // Get page-by-page extraction
+            $pages = $this->parserService->extractTextByPage($fullPath);
+            
+            // Get metadata
+            $metadata = $this->parserService->getMetadata($fullPath);
+            
+            Log::info('OPCR preview generated', [
+                'file_name' => $fileName,
+                'total_pages' => count($pages),
+                'viewed_by' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'file_name' => $fileName,
+                    'metadata' => $metadata,
+                    'raw_text' => $rawText,
+                    'pages' => $pages,
+                    'statistics' => [
+                        'total_pages' => count($pages),
+                        'total_characters' => strlen($rawText),
+                        'pages_with_tables' => collect($pages)->where('has_table', true)->count(),
+                        'total_lines' => array_sum(array_column($pages, 'line_count')),
+                    ],
+                ],
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error('Failed to generate OPCR preview', [
+                'file_name' => $fileName,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate preview',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Download an OPCR file
      *
      * @param string $fileName

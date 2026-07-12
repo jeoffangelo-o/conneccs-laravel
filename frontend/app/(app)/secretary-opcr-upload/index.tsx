@@ -617,6 +617,12 @@ export default function SecretaryOPCRUploadScreen() {
                   <View style={styles.fileActions}>
                     <TouchableOpacity
                       style={styles.actionButton}
+                      onPress={() => router.push(`/secretary-opcr-preview/${encodeURIComponent(file.file_name)}`)}
+                    >
+                      <SvgIcon name="fileText" size={20} color={colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
                       onPress={() => viewFile(file.file_name)}
                     >
                       <SvgIcon name="eye" size={20} color={colors.accent} />

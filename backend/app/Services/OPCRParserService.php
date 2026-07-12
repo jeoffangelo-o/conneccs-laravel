@@ -73,14 +73,20 @@ class OPCRParserService
                 $pageNumber = $index + 1;
                 $pageText = $page->getText();
                 
+                // Detect if page contains table structures
+                $hasTable = $this->detectTableStructure($pageText);
+                
                 $extractedPages[] = [
                     'page' => $pageNumber,
                     'text' => $pageText,
                     'length' => strlen($pageText),
+                    'has_table' => $hasTable,
+                    'line_count' => substr_count($pageText, "\n"),
                 ];
 
                 Log::debug("Extracted page {$pageNumber}", [
                     'text_length' => strlen($pageText),
+                    'has_table' => $hasTable,
                 ]);
             }
 
@@ -97,6 +103,44 @@ class OPCRParserService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Detect if text contains table structures
+     *
+     * @param string $text
+     * @return bool
+     */
+    private function detectTableStructure(string $text): bool
+    {
+        // Look for patterns that indicate tables:
+        // - Multiple consecutive spaces (column separators)
+        // - Repeated line patterns
+        // - Pipe characters or vertical bars
+        // - Multiple numbers in a row
+        
+        $lines = explode("\n", $text);
+        $tableIndicators = 0;
+        
+        foreach ($lines as $line) {
+            // Check for multiple consecutive spaces (3 or more)
+            if (preg_match('/\s{3,}/', $line)) {
+                $tableIndicators++;
+            }
+            
+            // Check for pipe characters or vertical bars
+            if (preg_match('/[|│]/', $line)) {
+                $tableIndicators++;
+            }
+            
+            // Check for lines with multiple tab characters
+            if (substr_count($line, "\t") >= 2) {
+                $tableIndicators++;
+            }
+        }
+        
+        // If we found table indicators in more than 20% of lines, likely a table
+        return $tableIndicators > (count($lines) * 0.2);
     }
 
     /**
