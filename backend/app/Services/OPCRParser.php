@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Log;
 
 class OPCRParser
 {
+    private $currentFunctionType = null;
+    private $currentMFO = null;
+    
     /**
      * Parse OPCR text and extract structured data
      *
@@ -95,6 +98,7 @@ class OPCRParser
 
     /**
      * Extract Major Final Outputs (MFOs) / Principal Activities and Programs (PAPs)
+     * MFOs are in column 1 with numbering like: 1.1, 1.2, 2.1, etc.
      *
      * @param string $text
      * @return array
@@ -104,10 +108,9 @@ class OPCRParser
         $mfos = [];
         $lines = explode("\n", $text);
         
-        $inMFOSection = false;
-        $currentMFO = null;
+        $currentType = null; // Strategic, Core, or Support
         
-        foreach ($lines as $line) {
+        foreach ($lines as $lineNum => $line) {
             $line = trim($line);
             
             // Skip empty lines
@@ -115,24 +118,43 @@ class OPCRParser
                 continue;
             }
             
-            // Check if we're entering MFO/PAP section
-            if (preg_match('/MFO|PAP|MAJOR FINAL OUTPUT|PRINCIPAL ACTIVITIES/i', $line)) {
-                $inMFOSection = true;
+            // Detect function type headers with percentages
+            if (preg_match('/STRATEGIC\s+FUNCTION.*?(\d+)%/i', $line, $matches)) {
+                $currentType = 'Strategic';
+                Log::debug('Entering Strategic Functions section', ['percentage' => $matches[1]]);
+                continue;
+            } elseif (preg_match('/CORE\s+FUNCTION.*?(\d+)%/i', $line, $matches)) {
+                $currentType = 'Core';
+                Log::debug('Entering Core Functions section', ['percentage' => $matches[1]]);
+                continue;
+            } elseif (preg_match('/SUPPORT\s+FUNCTION.*?(\d+)%/i', $line, $matches)) {
+                $currentType = 'Support';
+                Log::debug('Entering Support Functions section', ['percentage' => $matches[1]]);
                 continue;
             }
             
-            // Look for numbered items (MFOs are usually numbered)
-            if (preg_match('/^[A-Z]\.|\d+\./', $line)) {
-                // This might be an MFO
-                $mfoText = preg_replace('/^[A-Z]\.|^\d+\./', '', $line);
-                $mfoText = trim($mfoText);
+            // Look for MFO pattern: starts with decimal numbering like "1.1", "1.2", "2.1"
+            // Followed by capital letters (main MFO title)
+            if (preg_match('/^(\d+\.\d+)\s+([A-Z][A-Za-z\s,\-\/]+?)(?:\s|$)/i', $line, $matches)) {
+                $code = $matches[1];
+                $description = trim($matches[2]);
                 
-                if (strlen($mfoText) > 10) { // Must be substantial text
+                // Only add if description is substantial (more than just a few characters)
+                if (strlen($description) > 10) {
                     $mfos[] = [
-                        'code' => $this->extractMFOCode($line),
-                        'description' => $mfoText,
+                        'code' => $code,
+                        'description' => $description,
+                        'type' => $currentType ?? 'Core',
+                        'line_number' => $lineNum + 1,
                     ];
-                    Log::debug('MFO found', ['mfo' => $mfoText]);
+                    
+                    $this->currentMFO = $code;
+                    
+                    Log::debug('MFO found', [
+                        'code' => $code,
+                        'mfo' => substr($description, 0, 50),
+                        'type' => $currentType ?? 'Core',
+                    ]);
                 }
             }
         }
@@ -156,6 +178,7 @@ class OPCRParser
 
     /**
      * Extract targets/success indicators from OPCR
+     * Targets are in column 2 with hierarchical numbering like: 1.1.1, 1.1.2, 1.2.1, etc.
      *
      * @param string $text
      * @param array $pages
@@ -164,38 +187,139 @@ class OPCRParser
     public function extractTargets(string $text, array $pages): array
     {
         $targets = [];
+        $currentMFO = null;
+        $currentType = null;
         
         foreach ($pages as $pageData) {
             $pageText = $pageData['text'];
             $lines = explode("\n", $pageText);
             
             foreach ($lines as $line) {
+                $originalLine = $line;
                 $line = trim($line);
                 
-                // Skip short lines
-                if (strlen($line) < 20) {
+                // Skip very short lines
+                if (strlen($line) < 15) {
                     continue;
                 }
                 
-                // Look for lines that might be targets
-                // Targets often start with action verbs or contain specific keywords
-                if ($this->looksLikeTarget($line)) {
-                    $target = [
-                        'description' => $this->cleanTargetText($line),
-                        'page' => $pageData['page'],
-                        'accountable' => $this->extractAccountableFromLine($line),
-                        'ratings' => $this->extractRatingsFromLine($line),
-                    ];
+                // Track function type
+                if (preg_match('/STRATEGIC\s+FUNCTION/i', $line)) {
+                    $currentType = 'Strategic';
+                    continue;
+                } elseif (preg_match('/CORE\s+FUNCTION/i', $line)) {
+                    $currentType = 'Core';
+                    continue;
+                } elseif (preg_match('/SUPPORT\s+FUNCTION/i', $line)) {
+                    $currentType = 'Support';
+                    continue;
+                }
+                
+                // Track current MFO (pattern: 1.1, 1.2, etc.)
+                if (preg_match('/^(\d+\.\d+)\s+/', $line, $matches)) {
+                    $currentMFO = $matches[1];
+                }
+                
+                // Look for target/success indicator pattern
+                // Pattern: 1.1.1, 1.2.3, 1.3.1.1 (3 or 4 level numbering)
+                if (preg_match('/^(\d+\.\d+\.\d+(?:\.\d+)?)\s+(.+?)$/i', $line, $matches)) {
+                    $targetCode = $matches[1];
+                    $description = trim($matches[2]);
                     
-                    if (!empty($target['description'])) {
-                        $targets[] = $target;
-                        Log::debug('Target extracted', ['target' => substr($target['description'], 0, 50) . '...']);
+                    // Extract accountable persons (usually appear after description)
+                    $accountable = $this->extractAccountableFromLine($originalLine);
+                    
+                    // Extract period (Jan-Dec, Jan-Jun, Jul-Dec) from end of line
+                    $period = $this->extractPeriodFromLine($line);
+                    
+                    // Extract ratings (x marks in Q, E, T, A columns)
+                    $ratings = $this->extractRatingsFromLine($originalLine);
+                    
+                    // Clean description - remove trailing names, dates, and markers
+                    $description = $this->cleanTargetDescription($description);
+                    
+                    if (strlen($description) > 10) {
+                        $targets[] = [
+                            'code' => $targetCode,
+                            'mfo_code' => $currentMFO,
+                            'function_type' => $currentType ?? 'Core',
+                            'description' => $description,
+                            'accountable' => $accountable,
+                            'period' => $period,
+                            'ratings' => $ratings,
+                            'page' => $pageData['page'],
+                        ];
+                        
+                        Log::debug('Target extracted', [
+                            'code' => $targetCode,
+                            'mfo' => $currentMFO,
+                            'description' => substr($description, 0, 60),
+                        ]);
+                    }
+                }
+                
+                // Also catch bullet points or sub-items without full numbering
+                // Pattern: • description or - description
+                elseif (preg_match('/^[•\-\*]\s+(.+?)$/i', $line, $matches)) {
+                    $description = trim($matches[1]);
+                    
+                    if ($this->looksLikeTarget($description) && strlen($description) > 15) {
+                        $accountable = $this->extractAccountableFromLine($originalLine);
+                        $period = $this->extractPeriodFromLine($line);
+                        $ratings = $this->extractRatingsFromLine($originalLine);
+                        
+                        $description = $this->cleanTargetDescription($description);
+                        
+                        $targets[] = [
+                            'code' => null,
+                            'mfo_code' => $currentMFO,
+                            'function_type' => $currentType ?? 'Core',
+                            'description' => $description,
+                            'accountable' => $accountable,
+                            'period' => $period,
+                            'ratings' => $ratings,
+                            'page' => $pageData['page'],
+                        ];
                     }
                 }
             }
         }
         
         return $targets;
+    }
+    
+    /**
+     * Clean target description by removing trailing info
+     */
+    private function cleanTargetDescription(string $description): string
+    {
+        // Remove period indicators at the end
+        $description = preg_replace('/\s+(Jan-Dec|Jan-Jun|Jul-Dec)\s*$/i', '', $description);
+        
+        // Remove single letters (likely column markers)
+        $description = preg_replace('/\s+[QETA]\s*$/i', '', $description);
+        
+        // Remove trailing x marks
+        $description = preg_replace('/\s+x\s*$/i', '', $description);
+        
+        // Remove trailing numbers that look like dates
+        $description = preg_replace('/\s+\d{4}\s*$/', '', $description);
+        
+        // Clean up extra whitespace
+        $description = preg_replace('/\s+/', ' ', $description);
+        
+        return trim($description);
+    }
+    
+    /**
+     * Extract period from a single line
+     */
+    private function extractPeriodFromLine(string $line): ?string
+    {
+        if (preg_match('/(Jan-Dec|Jan-Jun|Jul-Dec)/i', $line, $matches)) {
+            return $matches[1];
+        }
+        return null;
     }
 
     /**
@@ -250,6 +374,7 @@ class OPCRParser
 
     /**
      * Extract accountable persons/units from line
+     * Names appear in column 4, usually as: Last, First format or comma-separated list
      *
      * @param string $line
      * @return array
@@ -258,25 +383,36 @@ class OPCRParser
     {
         $accountable = [];
         
-        // Common Filipino surnames and positions
-        $namePatterns = [
-            '/([A-Z][a-z]+)\s*,?\s*([A-Z][a-z]+)/',  // Last, First
-            '/([A-Z][a-z]+)\s+([A-Z]\.)/',            // Last F.
-            '/(Dean|Secretary|Chair|Coordinator|Faculty)\s+([A-Z][a-z]+)/',  // Position Name
-        ];
+        // Filipino name patterns - often appear as comma-separated lists
+        // Look for capitalized words that appear to be names
+        // Pattern: "Onesa, Bagaporo, Baluis, Benitez, Bernosa, Brogueza"
         
-        foreach ($namePatterns as $pattern) {
-            if (preg_match_all($pattern, $line, $matches)) {
-                foreach ($matches[0] as $match) {
-                    $name = trim($match);
-                    if (strlen($name) > 3 && !in_array($name, $accountable)) {
-                        $accountable[] = $name;
-                    }
+        // Split by common delimiters and look for name-like words
+        $parts = preg_split('/[,;]/', $line);
+        
+        foreach ($parts as $part) {
+            $part = trim($part);
+            
+            // Look for capitalized words (likely surnames)
+            // Pattern: One or more capital letters followed by lowercase letters
+            if (preg_match('/^[A-Z][a-z]{2,}$/', $part)) {
+                // Check if it's not a common word (like months, ratings, etc.)
+                $commonWords = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December',
+                               'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+                               'Budget', 'Office', 'College', 'University', 'Dean', 'President',
+                               'Quality', 'Efficiency', 'Timeliness', 'Average', 'Rating'];
+                
+                if (!in_array($part, $commonWords) && strlen($part) >= 3) {
+                    $accountable[] = $part;
                 }
             }
         }
         
-        return $accountable;
+        // Remove duplicates
+        $accountable = array_unique($accountable);
+        
+        return array_values($accountable);
     }
 
     /**
@@ -306,6 +442,7 @@ class OPCRParser
 
     /**
      * Extract ratings from line (Q, E, T, A columns)
+     * Look for 'x' marks in specific positions or patterns
      *
      * @param string $line
      * @return array
@@ -314,22 +451,30 @@ class OPCRParser
     {
         $ratings = [
             'Q' => false,  // Quality
-            'E' => false,  // Efficiency
+            'E' => false,  // Efficiency  
             'T' => false,  // Timeliness
             'A' => false,  // Average
         ];
         
-        // Look for checkmarks, X marks, or filled indicators
-        $indicators = ['✓', '✔', '√', 'X', 'x', '•', '●'];
+        // Count 'x' occurrences (case insensitive)
+        // Typically there are 4 'x' marks if all ratings are checked
+        $xCount = substr_count(strtolower($line), 'x');
         
-        // Try to find rating columns
-        // This is a simplified approach - actual implementation might need more sophisticated parsing
-        foreach (array_keys($ratings) as $rating) {
-            foreach ($indicators as $indicator) {
-                if (stripos($line, $indicator) !== false) {
-                    $ratings[$rating] = true;
-                    break;
-                }
+        // If we find exactly 4 x's, likely all ratings are marked
+        if ($xCount >= 4) {
+            $ratings['Q'] = true;
+            $ratings['E'] = true;
+            $ratings['T'] = true;
+            $ratings['A'] = true;
+        } 
+        // If fewer x's, try to determine which columns
+        elseif ($xCount > 0) {
+            // This is a simplified approach
+            // A more accurate method would need to know exact column positions
+            // For now, mark as many as we found
+            $keys = array_keys($ratings);
+            for ($i = 0; $i < min($xCount, 4); $i++) {
+                $ratings[$keys[$i]] = true;
             }
         }
         
@@ -375,30 +520,61 @@ class OPCRParser
         $targets = $this->extractTargets($text, $pages);
         $period = $this->extractPeriod($text);
         
-        // Structure data with MFOs and their targets
-        $structured = [];
+        // Group MFOs by type
+        $mfosByType = [
+            'Strategic' => [],
+            'Core' => [],
+            'Support' => [],
+        ];
+        
+        // Group targets by MFO
+        $targetsByMFO = [];
+        foreach ($targets as $target) {
+            $mfoCode = $target['mfo_code'] ?? 'unassigned';
+            if (!isset($targetsByMFO[$mfoCode])) {
+                $targetsByMFO[$mfoCode] = [];
+            }
+            $targetsByMFO[$mfoCode][] = $target;
+        }
         
         foreach ($mfos as $mfo) {
+            $type = $mfo['type'] ?? 'Core';
+            $mfoCode = $mfo['code'];
+            
             $mfoData = [
                 'mfo' => $mfo['description'],
-                'code' => $mfo['code'],
-                'targets' => [],
+                'code' => $mfoCode,
+                'type' => $type,
+                'targets' => $targetsByMFO[$mfoCode] ?? [],
+                'target_count' => count($targetsByMFO[$mfoCode] ?? []),
             ];
             
-            // This is simplified - in reality, you'd need to associate targets with their MFOs
-            // based on proximity in the text or table structure
-            
-            $structured[] = $mfoData;
+            $mfosByType[$type][] = $mfoData;
         }
         
         return [
             'period' => $period,
             'college' => $this->extractCollege($text),
-            'data' => $structured,
+            'mfos_by_type' => $mfosByType,
+            'all_mfos' => $mfos,
+            'data' => array_merge(
+                $mfosByType['Strategic'],
+                $mfosByType['Core'],
+                $mfosByType['Support']
+            ),
             'all_targets' => $targets,
             'statistics' => [
                 'total_mfos' => count($mfos),
+                'strategic_count' => count($mfosByType['Strategic']),
+                'core_count' => count($mfosByType['Core']),
+                'support_count' => count($mfosByType['Support']),
                 'total_targets' => count($targets),
+                'targets_with_accountable' => count(array_filter($targets, function($t) {
+                    return !empty($t['accountable']);
+                })),
+                'targets_with_ratings' => count(array_filter($targets, function($t) {
+                    return !empty(array_filter($t['ratings']));
+                })),
             ],
         ];
     }

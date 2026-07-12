@@ -402,11 +402,24 @@ class OPCRUploadController extends Controller
             }
             unset($page); // Break reference
             
+            // Debug: Log first 2000 characters of raw text
+            Log::info('Raw text sample for debugging', [
+                'sample' => substr($rawText, 0, 2000),
+                'first_page_sample' => isset($pages[0]) ? substr($pages[0]['text'], 0, 1000) : 'No pages',
+            ]);
+            
             // Parse OPCR structure
             $parsedData = $this->opcrParser->parseComplete($rawText, $pages);
             
             // Clean all string values in parsed data
             $parsedData = $this->cleanArrayRecursive($parsedData);
+            
+            // Add debug info
+            $parsedData['debug'] = [
+                'raw_text_length' => strlen($rawText),
+                'total_pages' => count($pages),
+                'first_100_lines' => array_slice(explode("\n", $rawText), 0, 100),
+            ];
             
             Log::info('OPCR parsed successfully', [
                 'file_name' => $fileName,
