@@ -393,8 +393,6 @@ export default function SecretaryOPCRUploadScreen() {
       ]);
     }
   };
-    });
-  };
 
   return (
     <View style={styles.container}>
