@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\OPCRParserService;
+use App\Services\OPCRParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -13,10 +14,12 @@ use Exception;
 class OPCRUploadController extends Controller
 {
     protected OPCRParserService $parserService;
+    protected OPCRParser $opcrParser;
 
-    public function __construct(OPCRParserService $parserService)
+    public function __construct(OPCRParserService $parserService, OPCRParser $opcrParser)
     {
         $this->parserService = $parserService;
+        $this->opcrParser = $opcrParser;
     }
 
     /**
@@ -353,6 +356,126 @@ class OPCRUploadController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Parse OPCR and extract structured data
+     *
+     * @param string $fileName
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function parse(string $fileName)
+    {
+        try {
+            $filePath = 'opcr/' . $fileName;
+            
+            if (!Storage::exists($filePath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'OPCR file not found',
+                ], 404);
+            }
+
+            $fullPath = Storage::path($filePath);
+            
+            // Get raw text
+            $rawTextFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_raw.txt';
+            $rawTextPath = storage_path('app/opcr/raw-text/' . $rawTextFileName);
+            
+            $rawText = '';
+            if (file_exists($rawTextPath)) {
+                $rawText = file_get_contents($rawTextPath);
+            } else {
+                // Extract if not exists
+                $rawText = $this->parserService->extractText($fullPath);
+            }
+            
+            // Clean UTF-8 encoding issues more aggressively
+            $rawText = $this->cleanText($rawText);
+            
+            // Get page-by-page extraction
+            $pages = $this->parserService->extractTextByPage($fullPath);
+            
+            // Clean each page
+            foreach ($pages as &$page) {
+                $page['text'] = $this->cleanText($page['text']);
+            }
+            unset($page); // Break reference
+            
+            // Parse OPCR structure
+            $parsedData = $this->opcrParser->parseComplete($rawText, $pages);
+            
+            // Clean all string values in parsed data
+            $parsedData = $this->cleanArrayRecursive($parsedData);
+            
+            Log::info('OPCR parsed successfully', [
+                'file_name' => $fileName,
+                'mfos_found' => $parsedData['statistics']['total_mfos'] ?? 0,
+                'targets_found' => $parsedData['statistics']['total_targets'] ?? 0,
+                'parsed_by' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $parsedData,
+            ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+
+        } catch (Exception $e) {
+            Log::error('Failed to parse OPCR', [
+                'file_name' => $fileName,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to parse OPCR',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Clean text from invalid UTF-8 characters
+     *
+     * @param string $text
+     * @return string
+     */
+    private function cleanText(string $text): string
+    {
+        // Remove null bytes
+        $text = str_replace("\0", '', $text);
+        
+        // Convert to UTF-8
+        $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+        
+        // Remove invalid UTF-8 sequences
+        $text = iconv('UTF-8', 'UTF-8//IGNORE', $text);
+        
+        // Remove control characters except newlines, tabs, and carriage returns
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text);
+        
+        return $text;
+    }
+
+    /**
+     * Recursively clean all strings in an array
+     *
+     * @param mixed $data
+     * @return mixed
+     */
+    private function cleanArrayRecursive($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->cleanArrayRecursive($value);
+            }
+            return $data;
+        } elseif (is_string($data)) {
+            return $this->cleanText($data);
+        }
+        return $data;
     }
 
     /**

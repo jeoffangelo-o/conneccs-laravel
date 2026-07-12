@@ -56,7 +56,9 @@ export default function OPCRPreviewScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [editedText, setEditedText] = useState('');
-  const [viewMode, setViewMode] = useState<'pages' | 'full'>('pages');
+  const [viewMode, setViewMode] = useState<'pages' | 'full' | 'parsed'>('pages');
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [loadingParsed, setLoadingParsed] = useState(false);
 
   useEffect(() => {
     fetchPreview();
@@ -83,6 +85,39 @@ export default function OPCRPreviewScreen() {
       setLoading(false);
     }
   };
+
+  const fetchParsedData = async () => {
+    try {
+      setLoadingParsed(true);
+      console.log('Fetching parsed data for:', fileName);
+      
+      const response = await axios.get(`${API_URL}/api/opcr/parse/${fileName}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('Parse response:', response.data);
+
+      if (response.data.success) {
+        setParsedData(response.data.data);
+      } else {
+        console.error('Parse failed:', response.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching parsed data:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+    } finally {
+      setLoadingParsed(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode === 'parsed' && !parsedData) {
+      fetchParsedData();
+    }
+  }, [viewMode]);
 
   const handlePageChange = (page: number) => {
     if (!previewData) return;
@@ -190,9 +225,97 @@ export default function OPCRPreviewScreen() {
               Full Text
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, viewMode === 'parsed' && styles.toggleButtonActive]}
+            onPress={() => setViewMode('parsed')}
+          >
+            <Text style={[styles.toggleButtonText, viewMode === 'parsed' && styles.toggleButtonTextActive]}>
+              Parsed Data
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {viewMode === 'pages' ? (
+        {viewMode === 'parsed' ? (
+          loadingParsed ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={styles.loadingText}>Parsing OPCR...</Text>
+            </View>
+          ) : parsedData ? (
+            <View style={styles.parsedContainer}>
+              {/* Period and College */}
+              <View style={styles.parsedCard}>
+                <Text style={styles.parsedCardTitle}>OPCR Information</Text>
+                <View style={styles.parsedRow}>
+                  <Text style={styles.parsedLabel}>Period:</Text>
+                  <Text style={styles.parsedValue}>{parsedData.period}</Text>
+                </View>
+                <View style={styles.parsedRow}>
+                  <Text style={styles.parsedLabel}>College:</Text>
+                  <Text style={styles.parsedValue}>{parsedData.college}</Text>
+                </View>
+                <View style={styles.parsedRow}>
+                  <Text style={styles.parsedLabel}>Total MFOs:</Text>
+                  <Text style={styles.parsedValue}>{parsedData.statistics.total_mfos}</Text>
+                </View>
+                <View style={styles.parsedRow}>
+                  <Text style={styles.parsedLabel}>Total Targets:</Text>
+                  <Text style={styles.parsedValue}>{parsedData.statistics.total_targets}</Text>
+                </View>
+              </View>
+
+              {/* MFOs/PAPs */}
+              {parsedData.data && parsedData.data.length > 0 && (
+                <View style={styles.parsedCard}>
+                  <Text style={styles.parsedCardTitle}>Major Final Outputs (MFOs)</Text>
+                  {parsedData.data.map((mfo: any, index: number) => (
+                    <View key={index} style={styles.mfoItem}>
+                      <View style={styles.mfoHeader}>
+                        <Text style={styles.mfoCode}>{mfo.code}</Text>
+                        <Text style={styles.mfoDescription}>{mfo.mfo}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Targets */}
+              {parsedData.all_targets && parsedData.all_targets.length > 0 && (
+                <View style={styles.parsedCard}>
+                  <Text style={styles.parsedCardTitle}>Extracted Targets ({parsedData.all_targets.length})</Text>
+                  <ScrollView style={styles.targetsScroll} nestedScrollEnabled>
+                    {parsedData.all_targets.slice(0, 20).map((target: any, index: number) => (
+                      <View key={index} style={styles.targetItem}>
+                        <Text style={styles.targetDescription}>{target.description}</Text>
+                        {target.accountable && target.accountable.length > 0 && (
+                          <View style={styles.targetMeta}>
+                            <Text style={styles.targetMetaLabel}>Accountable:</Text>
+                            <Text style={styles.targetMetaValue}>
+                              {target.accountable.join(', ')}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.targetMeta}>
+                          <Text style={styles.targetMetaLabel}>Page:</Text>
+                          <Text style={styles.targetMetaValue}>{target.page}</Text>
+                        </View>
+                      </View>
+                    ))}
+                    {parsedData.all_targets.length > 20 && (
+                      <Text style={styles.moreText}>
+                        ... and {parsedData.all_targets.length - 20} more targets
+                      </Text>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>Failed to parse OPCR data</Text>
+            </View>
+          )
+        ) : viewMode === 'pages' ? (
           <>
             {/* Page Navigation */}
             <View style={styles.pageNav}>
@@ -516,5 +639,96 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
     fontSize: 11,
     color: colors.text3,
     textAlign: 'center',
+  },
+  parsedContainer: {
+    margin: isMobile ? 16 : 24,
+  },
+  parsedCard: {
+    backgroundColor: colors.bg2,
+    padding: isMobile ? 16 : 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 16,
+  },
+  parsedCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  parsedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  parsedLabel: {
+    fontSize: 14,
+    color: colors.text2,
+  },
+  parsedValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  mfoItem: {
+    padding: 12,
+    backgroundColor: colors.bg3,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  mfoHeader: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  mfoCode: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.accent,
+    minWidth: 30,
+  },
+  mfoDescription: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  targetsScroll: {
+    maxHeight: 400,
+  },
+  targetItem: {
+    padding: 12,
+    backgroundColor: colors.bg3,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  targetDescription: {
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  targetMeta: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  targetMetaLabel: {
+    fontSize: 12,
+    color: colors.text3,
+  },
+  targetMetaValue: {
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: '500',
+  },
+  moreText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: colors.text3,
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });
