@@ -177,6 +177,30 @@ class OPCRUploadController extends Controller
                 // Parse filename to extract info
                 $parts = explode('_', pathinfo($fileName, PATHINFO_FILENAME));
                 
+                // Try to get metadata from the raw text file
+                $rawTextFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_raw.txt';
+                $rawTextPath = storage_path('app/opcr/raw-text/' . $rawTextFileName);
+                
+                $textLength = 0;
+                $pageCount = 0;
+                
+                if (file_exists($rawTextPath)) {
+                    $textLength = strlen(file_get_contents($rawTextPath));
+                }
+                
+                // Try to get page count from PDF
+                try {
+                    $parser = new \Smalot\PdfParser\Parser();
+                    $pdf = $parser->parseFile($fullPath);
+                    $pages = $pdf->getPages();
+                    $pageCount = count($pages);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to get page count', [
+                        'file' => $fileName,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+                
                 return [
                     'file_name' => $fileName,
                     'storage_path' => $file,
@@ -185,6 +209,8 @@ class OPCRUploadController extends Controller
                     'college_name' => $parts[0] ?? null,
                     'year' => $parts[1] ?? null,
                     'period' => $parts[2] ?? null,
+                    'page_count' => $pageCount,
+                    'text_length' => $textLength,
                 ];
             })->sortByDesc('uploaded_at')->values();
 

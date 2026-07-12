@@ -30,6 +30,8 @@ interface UploadedFile {
   college_name: string | null;
   year: string | null;
   period: string | null;
+  page_count?: number;
+  text_length?: number;
 }
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.15:8000';
@@ -301,38 +303,76 @@ export default function SecretaryOPCRUploadScreen() {
   };
 
   const deleteFile = async (fileName: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this OPCR file?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await axios.delete(
-                `${API_URL}/api/opcr/files/${fileName}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
+    // For web, use window.confirm instead of Alert
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to delete this OPCR file?');
+      if (!confirmed) return;
+      
+      try {
+        console.log('Deleting file:', fileName);
+        console.log('Delete URL:', `${API_URL}/api/opcr/files/${fileName}`);
+        
+        const response = await axios.delete(
+          `${API_URL}/api/opcr/files/${fileName}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-              if (response.data.success) {
-                // Refresh list immediately after deletion
-                await fetchUploadedFiles();
-                Alert.alert('Success', 'File deleted successfully');
+        console.log('Delete response:', response.data);
+
+        if (response.data.success) {
+          // Refresh list immediately after deletion
+          await fetchUploadedFiles();
+          window.alert('File deleted successfully');
+        } else {
+          window.alert(response.data.message || 'Failed to delete file');
+        }
+      } catch (error: any) {
+        console.error('Delete error:', error);
+        console.error('Delete error response:', error.response?.data);
+        window.alert(error.response?.data?.message || 'Failed to delete file');
+      }
+    } else {
+      // For mobile, use React Native Alert
+      Alert.alert(
+        'Confirm Delete',
+        'Are you sure you want to delete this OPCR file?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                console.log('Deleting file:', fileName);
+                
+                const response = await axios.delete(
+                  `${API_URL}/api/opcr/files/${fileName}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                );
+
+                if (response.data.success) {
+                  await fetchUploadedFiles();
+                  Alert.alert('Success', 'File deleted successfully');
+                } else {
+                  Alert.alert('Error', response.data.message || 'Failed to delete file');
+                }
+              } catch (error: any) {
+                console.error('Delete error:', error);
+                Alert.alert('Error', error.response?.data?.message || 'Failed to delete file');
               }
-            } catch (error: any) {
-              console.error('Delete error:', error);
-              Alert.alert('Error', 'Failed to delete file');
-            }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -352,45 +392,35 @@ export default function SecretaryOPCRUploadScreen() {
   };
 
   const viewFile = (fileName: string) => {
-    // For web, open the download URL with authorization
+    // Open PDF in new browser tab for preview
     const fileUrl = `${API_URL}/api/opcr/download/${fileName}`;
     
     if (Platform.OS === 'web') {
-      // Create a temporary link and click it to trigger download
-      const link = document.createElement('a');
-      link.href = fileUrl;
-      link.target = '_blank';
-      // Add auth header via fetch and create blob URL
+      // Open in new tab with authentication
       fetch(fileUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       })
-        .then(response => response.blob())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch file');
+          }
+          return response.blob();
+        })
         .then(blob => {
+          // Create a blob URL and open in new tab for preview
           const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
+          window.open(url, '_blank');
+          // Clean up after a delay
+          setTimeout(() => window.URL.revokeObjectURL(url), 100);
         })
         .catch(error => {
-          console.error('Download error:', error);
-          Alert.alert('Error', 'Failed to download file');
+          console.error('Preview error:', error);
+          Alert.alert('Error', 'Failed to preview file');
         });
     } else {
-      // For mobile
-      Alert.alert('View File', `Opening ${fileName}`, [
-        {
-          text: 'OK',
-          onPress: () => {
-            console.log('Open file:', fileUrl);
-          },
-        },
-      ]);
+      Alert.alert('View File', `Opening ${fileName}`);
     }
   };
 
@@ -464,20 +494,6 @@ export default function SecretaryOPCRUploadScreen() {
               >
                 <SvgIcon name="x" size={18} color={colors.text3} />
               </TouchableOpacity>
-            </View>
-          )}
-
-          {/* PDF Preview */}
-          {previewUri && (
-            <View style={styles.previewContainer}>
-              <Text style={styles.previewTitle}>PDF Preview</Text>
-              <View style={styles.previewBox}>
-                <SvgIcon name="fileText" size={48} color={colors.accent} />
-                <Text style={styles.previewText}>PDF file selected</Text>
-                <Text style={styles.previewSubtext}>
-                  Preview will be available after upload
-                </Text>
-              </View>
             </View>
           )}
 
@@ -590,6 +606,13 @@ export default function SecretaryOPCRUploadScreen() {
                     <Text style={styles.fileCardDate}>
                       {formatDate(file.uploaded_at)} • {formatFileSize(file.size)}
                     </Text>
+                    {(file.page_count || file.text_length) && (
+                      <Text style={styles.fileCardStats}>
+                        {file.page_count ? `${file.page_count} pages` : ''}
+                        {file.page_count && file.text_length ? ' • ' : ''}
+                        {file.text_length ? `${file.text_length.toLocaleString()} characters` : ''}
+                      </Text>
+                    )}
                   </View>
                   <View style={styles.fileActions}>
                     <TouchableOpacity
@@ -917,6 +940,12 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
   fileCardDate: {
     fontSize: 11,
     color: colors.text3,
+  },
+  fileCardStats: {
+    fontSize: 11,
+    color: colors.accent,
+    marginTop: 4,
+    fontWeight: '500',
   },
   fileActions: {
     flexDirection: 'row',
