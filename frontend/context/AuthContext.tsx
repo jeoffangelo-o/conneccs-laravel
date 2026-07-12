@@ -13,6 +13,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -27,6 +28,7 @@ const USER_STORAGE_KEY = '@conneccs_user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -35,14 +37,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loadUserFromStorage = async () => {
     try {
-      const [token, storedUser] = await Promise.all([
+      const [storedToken, storedUser] = await Promise.all([
         AsyncStorage.getItem(AUTH_STORAGE_KEY),
         AsyncStorage.getItem(USER_STORAGE_KEY),
       ]);
 
-      if (token && storedUser) {
+      if (storedToken && storedUser) {
+        setToken(storedToken);
         setUser(JSON.parse(storedUser));
-        apiService.setAuthToken(token);
+        apiService.setAuthToken(storedToken);
       }
     } catch (error) {
       console.error('Failed to load user from storage:', error);
@@ -54,13 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await apiService.login(email, password);
-      const { token, user: userData } = response;
+      const { token: authToken, user: userData } = response;
 
-      await AsyncStorage.setItem(AUTH_STORAGE_KEY, token);
+      await AsyncStorage.setItem(AUTH_STORAGE_KEY, authToken);
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
 
+      setToken(authToken);
       setUser(userData);
-      apiService.setAuthToken(token);
+      apiService.setAuthToken(authToken);
     } catch (error) {
       throw error;
     }
@@ -69,13 +73,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (userData: any) => {
     try {
       const response = await apiService.register(userData);
-      const { token, user: newUser } = response;
+      const { token: authToken, user: newUser } = response;
 
-      await AsyncStorage.setItem(AUTH_STORAGE_KEY, token);
+      await AsyncStorage.setItem(AUTH_STORAGE_KEY, authToken);
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
 
+      setToken(authToken);
       setUser(newUser);
-      apiService.setAuthToken(token);
+      apiService.setAuthToken(authToken);
     } catch (error) {
       throw error;
     }
@@ -87,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
+      setToken(null);
       setUser(null);
       await AsyncStorage.multiRemove([AUTH_STORAGE_KEY, USER_STORAGE_KEY]);
       apiService.setAuthToken(null);
@@ -97,6 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
+        token,
         login,
         register,
         logout,

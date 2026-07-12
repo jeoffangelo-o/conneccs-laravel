@@ -65,6 +65,22 @@ export default function SecretaryOPCRUploadScreen() {
   
   const years = generateYears();
 
+  const testConnection = async () => {
+    try {
+      console.log('Testing connection...');
+      const response = await axios.get(`${API_URL}/api/opcr/test`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log('Test response:', response.data);
+      Alert.alert('Connection Test', JSON.stringify(response.data, null, 2));
+    } catch (error: any) {
+      console.error('Test error:', error);
+      Alert.alert('Connection Error', error.message);
+    }
+  };
+
   useEffect(() => {
     fetchUploadedFiles();
   }, []);
@@ -72,17 +88,26 @@ export default function SecretaryOPCRUploadScreen() {
   const fetchUploadedFiles = async () => {
     try {
       setLoadingFiles(true);
+      console.log('Fetching uploaded files...');
+      console.log('Token present:', !!token);
+      
       const response = await axios.get(`${API_URL}/api/opcr/files`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      console.log('Files response:', response.data);
+
       if (response.data.success) {
         setUploadedFiles(response.data.data);
       }
     } catch (error: any) {
-      console.error('Error fetching files:', error);
+      console.error('Error fetching files:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
     } finally {
       setLoadingFiles(false);
     }
@@ -131,22 +156,39 @@ export default function SecretaryOPCRUploadScreen() {
       return;
     }
 
+    if (!token) {
+      Alert.alert('Error', 'Authentication token not found. Please login again.');
+      return;
+    }
+
     try {
       setUploading(true);
       setUploadProgress(0);
+
+      console.log('Starting upload...');
+      console.log('API URL:', `${API_URL}/api/opcr/upload`);
+      console.log('Token present:', !!token);
+      console.log('File:', {
+        name: selectedFile.name,
+        uri: selectedFile.uri,
+        size: selectedFile.size,
+      });
 
       const formData = new FormData();
       
       // Add file to FormData
       const fileToUpload: any = {
-        uri: Platform.OS === 'ios' ? selectedFile.uri.replace('file://', '') : selectedFile.uri,
+        uri: selectedFile.uri,
         type: 'application/pdf',
         name: selectedFile.name,
       };
+      
       formData.append('file', fileToUpload);
       formData.append('college_name', 'College of Computer Studies');
       formData.append('year', year);
       formData.append('period', period);
+
+      console.log('FormData created, making request...');
 
       const response = await axios.post(
         `${API_URL}/api/opcr/upload`,
@@ -160,10 +202,13 @@ export default function SecretaryOPCRUploadScreen() {
             const progress = progressEvent.total
               ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
               : 0;
+            console.log('Upload progress:', progress);
             setUploadProgress(progress);
           },
         }
       );
+
+      console.log('Upload response:', response.data);
 
       if (response.data.success) {
         Alert.alert(
@@ -188,9 +233,25 @@ export default function SecretaryOPCRUploadScreen() {
         );
       }
     } catch (error: any) {
-      console.error('Upload error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to upload OPCR';
-      Alert.alert('Error', errorMessage);
+      console.error('Upload error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers,
+      });
+      
+      let errorMessage = 'Failed to upload OPCR';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        errorMessage = Object.values(errors).flat().join('\n');
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Upload Error', errorMessage);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -277,7 +338,15 @@ export default function SecretaryOPCRUploadScreen() {
       >
         {/* Upload Form */}
         <View style={styles.uploadSection}>
-          <Text style={styles.sectionTitle}>Upload New OPCR PDF</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={styles.sectionTitle}>Upload New OPCR PDF</Text>
+            <TouchableOpacity
+              onPress={testConnection}
+              style={{ padding: 8, backgroundColor: colors.bg3, borderRadius: 6 }}
+            >
+              <Text style={{ fontSize: 12, color: colors.text2 }}>Test Connection</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* File Picker */}
           <TouchableOpacity

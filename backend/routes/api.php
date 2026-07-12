@@ -57,6 +57,15 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // OPCR Upload routes
     Route::prefix('opcr')->group(function () {
+        Route::get('/test', function () {
+            return response()->json([
+                'success' => true,
+                'message' => 'OPCR endpoint is working',
+                'user_id' => auth()->id(),
+                'max_upload_size' => ini_get('upload_max_filesize'),
+                'post_max_size' => ini_get('post_max_size'),
+            ]);
+        });
         Route::post('/upload', [OPCRUploadController::class, 'upload']);
         Route::get('/files', [OPCRUploadController::class, 'index']);
         Route::get('/download/{fileName}', [OPCRUploadController::class, 'download']);
