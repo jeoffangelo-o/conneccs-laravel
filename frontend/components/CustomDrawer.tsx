@@ -19,8 +19,22 @@ interface MenuItemData {
 export default function CustomDrawer(props: DrawerContentComponentProps) {
   const { user, logout } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { getUnreadCount } = useData();
+  const { unreadCount, getUnreadCount } = useData();
   const router = useRouter();
+
+  // Fetch unread count on mount and periodically
+  React.useEffect(() => {
+    if (user) {
+      getUnreadCount();
+      
+      // Refresh every 30 seconds
+      const interval = setInterval(() => {
+        getUnreadCount();
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -30,8 +44,6 @@ export default function CustomDrawer(props: DrawerContentComponentProps) {
       console.error('Logout failed:', error);
     }
   };
-
-  const unreadCount = user ? getUnreadCount(user.id) : 0;
 
   // Define menu items with role-based visibility
   const menuItems: MenuItemData[] = [

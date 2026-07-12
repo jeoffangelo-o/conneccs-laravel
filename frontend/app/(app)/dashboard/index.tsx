@@ -13,6 +13,7 @@ import { DrawerActions } from '@react-navigation/native';
 import { useNavigation } from 'expo-router';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useData } from '../../../context/DataContext';
 import { StatusBar } from 'expo-status-bar';
 import { SvgIcon } from '../../../components/SvgIcon';
 import { apiService } from '../../../services/api';
@@ -22,11 +23,18 @@ export default function DashboardScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
+  const { unreadCount, getUnreadCount } = useData();
   const styles = createStyles(colors);
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      getUnreadCount();
+    }
+  }, [user]);
 
   useEffect(() => {
     loadDashboardData();
@@ -128,14 +136,13 @@ export default function DashboardScreen() {
           </View>
         </View>
         <View style={styles.topbarRight}>
-          <TouchableOpacity style={styles.btnYellow} onPress={() => router.push('/reportorial-requirements')}>
-            <Text style={styles.btnYellowText}>+ New Report</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.topbarIconBtn} onPress={() => router.push('/notifications')}>
             <SvgIcon name="bell" size={22} color={colors.text2} />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>4</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>

@@ -7,7 +7,8 @@ interface DataContextType {
   fetchOPCR: () => Promise<any>;
   fetchNotifications: () => Promise<any[]>;
   refreshData: () => Promise<void>;
-  getUnreadCount: (userId: number) => number;
+  getUnreadCount: () => Promise<number>;
+  unreadCount: number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -15,6 +16,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchDashboardData = async () => {
     try {
@@ -55,20 +57,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const fetchNotifications = async () => {
     try {
       const response = await apiService.get('/notifications');
-      setNotifications(response.data);
-      return response.data;
+      const notificationsData = Array.isArray(response.data?.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+          ? response.data
+          : [];
+      setNotifications(notificationsData);
+      return notificationsData;
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
       return [];
     }
   };
 
-  const getUnreadCount = (userId: number): number => {
-    // Count unread notifications for the user
-    const unreadNotifications = notifications.filter(
-      (notif) => !notif.read && notif.userId === userId
-    );
-    return unreadNotifications.length;
+  const getUnreadCount = async (): Promise<number> => {
+    try {
+      const response = await apiService.get('/notifications/unread-count');
+      const count = response.data?.count || 0;
+      setUnreadCount(count);
+      return count;
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+      return 0;
+    }
   };
 
   const refreshData = async () => {
@@ -79,6 +90,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchIPCRs(),
         fetchOPCR(),
         fetchNotifications(),
+        getUnreadCount(),
       ]);
     } catch (error) {
       console.error('Failed to refresh data:', error);
@@ -96,6 +108,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchNotifications,
         refreshData,
         getUnreadCount,
+        unreadCount,
       }}
     >
       {children}
