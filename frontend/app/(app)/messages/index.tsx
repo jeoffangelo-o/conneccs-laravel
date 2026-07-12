@@ -54,7 +54,6 @@ export default function MessagesScreen() {
   const [mentionSearch, setMentionSearch] = useState('');
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [mentionedUsers, setMentionedUsers] = useState<any[]>([]);
-  const [completedMentions, setCompletedMentions] = useState<Array<{start: number, end: number, name: string}>>([]);
 
   useEffect(() => {
     loadChannels();
@@ -167,7 +166,6 @@ export default function MessagesScreen() {
     setAttachments([]);
     setReplyingTo(null);
     setMentionedUsers([]);
-    setCompletedMentions([]);
     setShowMentions(false);
     
     // Scroll to bottom
@@ -197,9 +195,35 @@ export default function MessagesScreen() {
   };
 
   const handleMessageTextChange = (text: string) => {
+    // Check if user is deleting (text is shorter than before)
+    if (text.length < messageText.length) {
+      // Find if cursor is right after a mention
+      const mentions = text.match(/@[^\s]+/g) || [];
+      const oldMentions = messageText.match(/@[^\s]+/g) || [];
+      
+      // If we lost a mention, user deleted part of it - remove the entire mention
+      if (oldMentions.length > mentions.length || 
+          (mentions.length > 0 && mentions[mentions.length - 1] !== oldMentions[oldMentions.length - 1])) {
+        
+        // Find the mention that was being edited
+        const lastMentionInOld = messageText.match(/@[^\s]*$/);
+        if (lastMentionInOld) {
+          // Remove the entire mention
+          const mentionStart = messageText.lastIndexOf(lastMentionInOld[0]);
+          const beforeMention = messageText.substring(0, mentionStart);
+          const afterMention = messageText.substring(mentionStart + lastMentionInOld[0].length);
+          const newText = beforeMention + afterMention;
+          
+          setMessageText(newText);
+          setShowMentions(false);
+          return;
+        }
+      }
+    }
+    
     setMessageText(text);
 
-    // Check for @ mentions
+    // Check for @ mentions (existing logic)
     const lastAtIndex = text.lastIndexOf('@');
     
     if (lastAtIndex !== -1) {
@@ -230,18 +254,10 @@ export default function MessagesScreen() {
   const handleSelectMention = (member: any) => {
     if (mentionStartIndex === -1) return;
 
-    // Replace @search with @username
+    // Replace @search with @FullName
     const beforeMention = messageText.substring(0, mentionStartIndex);
-    const afterMention = messageText.substring(mentionStartIndex + mentionSearch.length + 1);
-    const mentionText = `@${member.name}`;
-    const newText = `${beforeMention}${mentionText} ${afterMention}`;
-    
-    // Track this completed mention for highlighting
-    const mentionEnd = mentionStartIndex + mentionText.length;
-    setCompletedMentions([
-      ...completedMentions,
-      { start: mentionStartIndex, end: mentionEnd, name: member.name }
-    ]);
+    const afterSearch = messageText.substring(mentionStartIndex + mentionSearch.length + 1);
+    const newText = `${beforeMention}@${member.name} ${afterSearch}`;
     
     setMessageText(newText);
     setShowMentions(false);
@@ -260,43 +276,45 @@ export default function MessagesScreen() {
   );
 
   const renderMessageContent = (content: string, mentionedUserIds: any[], isMine: boolean) => {
-    if (!content) return null;
-    
-    // Check if content has any @ symbols
-    if (!content.includes('@')) {
+    if (!content || !content.includes('@')) {
       return content;
     }
     
-    // Define inline styles for mentions
-    const mentionStyle = {
-      color: isMine ? '#ffffff' : '#f4c430',
-      fontWeight: '700' as '700',
-      backgroundColor: isMine ? 'rgba(255, 255, 255, 0.25)' : 'rgba(244, 196, 48, 0.3)',
-      paddingLeft: 4,
-      paddingRight: 4,
-      paddingTop: 2,
-      paddingBottom: 2,
-      borderRadius: 4,
-    };
+    // Don't process if no mentioned users or empty array
+    if (!mentionedUserIds || mentionedUserIds.length === 0) {
+      return content;
+    }
     
-    // Split by @ and process each part
-    const segments = content.split(/(@[\w\s.]+)/g);
+    // Get the mentioned members
+    const mentionedMembers = channelMembers.filter(m => mentionedUserIds.includes(m.id));
     
-    return (
-      <>
-        {segments.map((segment, index) => {
-          // Check if this segment is a mention (starts with @)
-          if (segment.startsWith('@') && segment.length > 1) {
-            return (
-              <Text key={index} style={mentionStyle}>
-                {segment}
-              </Text>
-            );
-          }
-          return <Text key={index}>{segment}</Text>;
-        })}
-      </>
-    );
+    if (mentionedMembers.length === 0) {
+      return content;
+    }
+    
+    // Build regex to match @FullName patterns for all mentioned users
+    const memberPatterns = mentionedMembers.map(m => {
+      const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return `@${escapedName}`;
+    });
+    
+    // Create regex that matches any of the member names
+    const mentionRegex = new RegExp(`(${memberPatterns.join('|')})`, 'g');
+    
+    // Split content by the mentions
+    const segments = content.split(mentionRegex);
+    
+    return segments.map((segment, index) => {
+      // Check if this segment is one of the mentioned names
+      if (segment.startsWith('@') && memberPatterns.includes(segment)) {
+        return (
+          <Text key={index} style={isMine ? styles.mentionTextMine : styles.mentionText}>
+            {segment}
+          </Text>
+        );
+      }
+      return segment;
+    });
   };
 
   const handlePickImage = async () => {
@@ -1015,99 +1033,19 @@ export default function MessagesScreen() {
                   <SvgIcon name="paperclip" size={20} color={colors.text2} />
                 </TouchableOpacity>
 
-                {/* Message Input with Overlay for Highlighting */}
-                <View style={styles.messageInputContainer2}>
-                  {/* Highlighted Text Overlay */}
-                  {messageText.length > 0 && (
-                    <View style={[styles.messageInputOverlay, { pointerEvents: 'none' }]}>
-                      <Text style={[styles.messageInputText]}>
-                        {(() => {
-                          // Use tracked completed mentions for accurate highlighting
-                          if (completedMentions.length === 0) {
-                            return <Text style={{ color: colors.text }}>{messageText}</Text>;
-                          }
-                          
-                          const parts: any[] = [];
-                          let lastIndex = 0;
-                          
-                          // Sort mentions by start position
-                          const sortedMentions = [...completedMentions].sort((a, b) => a.start - b.start);
-                          
-                          sortedMentions.forEach((mention) => {
-                            // Skip if mention is outside current text bounds
-                            if (mention.start >= messageText.length) return;
-                            
-                            // Add text before this mention
-                            if (mention.start > lastIndex) {
-                              parts.push({
-                                type: 'text',
-                                content: messageText.substring(lastIndex, mention.start),
-                              });
-                            }
-                            
-                            // Add the mention (adjust end if text was edited)
-                            const adjustedEnd = Math.min(mention.end, messageText.length);
-                            parts.push({
-                              type: 'mention',
-                              content: messageText.substring(mention.start, adjustedEnd),
-                            });
-                            
-                            lastIndex = adjustedEnd;
-                          });
-                          
-                          // Add remaining text
-                          if (lastIndex < messageText.length) {
-                            parts.push({
-                              type: 'text',
-                              content: messageText.substring(lastIndex),
-                            });
-                          }
-                          
-                          return parts.map((part, index) => {
-                            if (part.type === 'mention') {
-                              return (
-                                <Text
-                                  key={index}
-                                  style={{
-                                    color: colors.accent,
-                                    fontWeight: '700',
-                                    backgroundColor: `${colors.accent}25`,
-                                    paddingHorizontal: 4,
-                                    paddingVertical: 2,
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  {part.content}
-                                </Text>
-                              );
-                            }
-                            return (
-                              <Text key={index} style={{ color: colors.text }}>
-                                {part.content}
-                              </Text>
-                            );
-                          });
-                        })()}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Actual TextInput (transparent text when there's content) */}
-                  <TextInput
-                    style={[
-                      styles.messageInput,
-                      messageText.length > 0 && { color: 'transparent' },
-                    ]}
-                    placeholder={`Message #${selectedChannel.name}`}
-                    placeholderTextColor={colors.text3}
-                    value={messageText}
-                    onChangeText={handleMessageTextChange}
-                    multiline
-                    maxLength={2000}
-                    onSubmitEditing={handleSendMessage}
-                  />
-                </View>
-                
+                {/* Message Input */}
+                <TextInput
+                  style={styles.messageInput}
+                  placeholder={`Message #${selectedChannel.name}`}
+                  placeholderTextColor={colors.text3}
+                  value={messageText}
+                  onChangeText={handleMessageTextChange}
+                  multiline
+                  maxLength={2000}
+                  onSubmitEditing={handleSendMessage}
+                  selectionColor={colors.accent}
+                />
+              
                 <TouchableOpacity
                   style={[
                     styles.sendButton,
@@ -1768,18 +1706,13 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
     color: colors.text3,
   },
   mentionText: {
-    color: '#f4c430', // Explicit yellow color
+    color: '#f4c430',
     fontWeight: '700',
-    backgroundColor: 'rgba(244, 196, 48, 0.25)', // Yellow with 25% opacity
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginHorizontal: 2,
   },
   mentionTextMine: {
     color: '#ffffff',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   // Message Input
   messageInputContainer: {
@@ -1806,6 +1739,7 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
   messageInputContainer2: {
     flex: 1,
     position: 'relative',
+    justifyContent: 'center',
   },
   messageInputOverlay: {
     position: 'absolute',
@@ -1815,7 +1749,6 @@ const createStyles = (colors: any, isMobile: boolean) => StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
     justifyContent: 'center',
   },
   messageInputText: {

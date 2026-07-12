@@ -181,6 +181,42 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Quick Login (Development Only) */}
+          <View style={styles.quickLoginContainer}>
+            <Text style={[styles.quickLoginTitle, { color: colors.text3 }]}>
+              Quick Login (Dev)
+            </Text>
+            <View style={styles.quickLoginButtons}>
+              <TouchableOpacity
+                style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
+                onPress={() => {
+                  setEmail('dean@cspc.edu.ph');
+                  setPassword('password123');
+                }}
+              >
+                <Text style={[styles.quickLoginButtonText, { color: colors.text }]}>Dean</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
+                onPress={() => {
+                  setEmail('secretary@cspc.edu.ph');
+                  setPassword('password123');
+                }}
+              >
+                <Text style={[styles.quickLoginButtonText, { color: colors.text }]}>Secretary</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
+                onPress={() => {
+                  setEmail('faculty@cspc.edu.ph');
+                  setPassword('password123');
+                }}
+              >
+                <Text style={[styles.quickLoginButtonText, { color: colors.text }]}>Faculty</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Footer */}
           <Text style={[styles.footer, { color: colors.text3 }]}>
             © 2026 College of Computer Studies{'\n'}
@@ -305,6 +341,37 @@ const styles = StyleSheet.create({
   registerLink: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  quickLoginContainer: {
+    width: '100%',
+    maxWidth: 400,
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  quickLoginTitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  quickLoginButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  quickLoginButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  quickLoginButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   footer: {
     fontSize: 12,
