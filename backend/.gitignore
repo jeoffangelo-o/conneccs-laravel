@@ -18,6 +18,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/opcr/*.pdf
+/storage/app/opcr/raw-text/*.txt
 /vendor
 Homestead.json
 Homestead.yaml

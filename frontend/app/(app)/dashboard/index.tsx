@@ -136,6 +136,14 @@ export default function DashboardScreen() {
           </View>
         </View>
         <View style={styles.topbarRight}>
+          {user?.role === 'SECRETARY' && (
+            <TouchableOpacity 
+              style={styles.btnYellow} 
+              onPress={() => router.push('/secretary-opcr-upload')}
+            >
+              <Text style={styles.btnYellowText}>📄 Upload OPCR</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.topbarIconBtn} onPress={() => router.push('/notifications')}>
             <SvgIcon name="bell" size={22} color={colors.text2} />
             {unreadCount > 0 && (

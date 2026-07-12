@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChannelController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\OPCRUploadController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,7 +55,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
     });
     
-    // Add more protected routes here
-    // Example:
-    // Route::get('/dashboard', [DashboardController::class, 'index']);
+    // OPCR Upload routes
+    Route::prefix('opcr')->group(function () {
+        Route::post('/upload', [OPCRUploadController::class, 'upload']);
+        Route::get('/files', [OPCRUploadController::class, 'index']);
+        Route::get('/download/{fileName}', [OPCRUploadController::class, 'download']);
+        Route::delete('/files/{fileName}', [OPCRUploadController::class, 'destroy']);
+    });
 });

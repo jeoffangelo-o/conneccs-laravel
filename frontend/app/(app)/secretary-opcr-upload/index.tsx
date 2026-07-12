@@ -1,614 +1,603 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  Platform,
+  TouchableOpacity,
   Alert,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { DrawerActions } from '@react-navigation/native';
-import { useNavigation } from 'expo-router';
-import { useTheme } from '../../../context/ThemeContext';
-import { StatusBar } from 'expo-status-bar';
-import { SvgIcon } from '../../../components/SvgIcon';
-import { apiService } from '../../../services/api';
+import * as DocumentPicker from 'expo-document-picker';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
+import axios from 'axios';
 
-type OPCRTarget = {
-  id: string;
-  kra: string;
-  function: string;
-  indicator: string;
-  targetValue: string;
-  weight: 'Strategic' | 'Core' | 'Support';
-  period: string;
-  accountable: string[];
-  ratingDimensions: string[];
-};
+interface UploadedFile {
+  file_name: string;
+  storage_path: string;
+  size: number;
+  uploaded_at: number;
+  college_name: string | null;
+  year: string | null;
+  period: string | null;
+}
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.8:8000';
 
 export default function SecretaryOPCRUploadScreen() {
-  const router = useRouter();
-  const navigation = useNavigation();
-  const { colors, isDark } = useTheme();
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
-  
-  const [uploadedFile, setUploadedFile] = useState<any>(null);
-  const [extractedTargets, setExtractedTargets] = useState<OPCRTarget[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const { user, token } = useAuth();
+  const [selectedFile, setSelectedFile] = useState<any>(null);
+  const [collegeName, setCollegeName] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [period, setPeriod] = useState<'MIDYEAR' | 'YEAR_END'>('MIDYEAR');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(true);
 
-  const availableYears = [2024, 2025, 2026, 2027, 2028];
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, []);
 
-  const handleFileSelect = () => {
-    if (Platform.OS === 'web') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.pdf,.xlsx,.xls';
-      input.onchange = (e: any) => {
-        const file = e.target.files[0];
-        if (file) {
-          setUploadedFile({
-            name: file.name,
-            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-            type: file.type,
-            file: file,
-          });
-          // In a real implementation, you would process the file here
-          Alert.alert('File Selected', `Selected: ${file.name}`);
-        }
-      };
-      input.click();
-    }
-  };
-
-  const loadSampleData = () => {
-    const sampleTargets: OPCRTarget[] = [
-      {
-        id: 'KRA1-SF1',
-        kra: 'KRA 1: Strategic Direction and Leadership',
-        function: 'Strategic Planning and Policy Development',
-        indicator: 'Number of strategic plans developed and implemented',
-        targetValue: '100% implementation',
-        weight: 'Strategic',
-        period: `Jan-Dec ${selectedYear}`,
-        accountable: ['Dean Onesa', 'Chair Colle', 'Chair Benitez'],
-        ratingDimensions: ['Q', 'E', 'T'],
-      },
-      {
-        id: 'KRA2-CF1',
-        kra: 'KRA 2: Instruction and Learning',
-        function: 'Curriculum Development and Enhancement',
-        indicator: 'Percentage of updated course syllabi aligned with industry standards',
-        targetValue: '100% of courses',
-        weight: 'Core',
-        period: `Jan-Jun ${selectedYear}`,
-        accountable: ['Chair Colle', 'Chair Pandes', 'Chair Mortel', 'Chair Prianes'],
-        ratingDimensions: ['Q', 'E'],
-      },
-      {
-        id: 'KRA3-CF3',
-        kra: 'KRA 3: Research and Innovation',
-        function: 'Research Output and Publication',
-        indicator: 'Number of research papers published in indexed journals',
-        targetValue: '5 publications',
-        weight: 'Core',
-        period: `Jan-Dec ${selectedYear}`,
-        accountable: ['Benosa', 'Omorog', 'Onate', 'Serrano'],
-        ratingDimensions: ['Q', 'E', 'T'],
-      },
-      {
-        id: 'KRA5-SF1',
-        kra: 'KRA 5: Resource Management',
-        function: 'Laboratory and Facility Management',
-        indicator: 'Percentage of functional laboratory equipment',
-        targetValue: '95% operational',
-        weight: 'Support',
-        period: `Jan-Dec ${selectedYear}`,
-        accountable: ['Bagaporo', 'Fortuno', 'Prades', 'Lipata'],
-        ratingDimensions: ['Q', 'T'],
-      },
-    ];
-
-    setExtractedTargets(sampleTargets);
-    setUploadedFile({
-      name: `OPCR_CCS_${selectedYear}_Sample.xlsx`,
-      size: '0.15 MB',
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      file: null,
-    });
-
-    Alert.alert('Sample Data Loaded', `Successfully loaded ${sampleTargets.length} sample OPCR targets for ${selectedYear}.`);
-  };
-
-  const handleSaveTargets = async () => {
-    setIsSaving(true);
-    
+  const fetchUploadedFiles = async () => {
     try {
-      // Prepare data for API
-      const payload = {
-        year: selectedYear,
-        fileName: uploadedFile?.name || 'sample.xlsx',
-        targets: extractedTargets.map(target => ({
-          code: target.id,
-          kra: target.kra,
-          majorFunction: target.function,
-          successIndicator: target.indicator,
-          targetValue: target.targetValue,
-          weight: target.weight,
-          timeline: target.period,
-          accountableUnits: target.accountable,
-          requiredRatings: target.ratingDimensions,
-        })),
-      };
+      setLoadingFiles(true);
+      const response = await axios.get(`${API_URL}/api/opcr/files`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      // Call API to save OPCR targets
-      await apiService.post('/opcr/upload', payload);
-
-      setIsSaving(false);
-      Alert.alert(
-        'Save Successful', 
-        `${extractedTargets.length} OPCR targets for ${selectedYear} have been saved. Faculty IPCRs will be auto-generated.`,
-        [
-          { text: 'OK', onPress: () => router.back() }
-        ]
-      );
-    } catch (error) {
-      setIsSaving(false);
-      console.error('Error saving OPCR targets:', error);
-      Alert.alert('Error', 'Failed to save OPCR targets. Please try again.');
+      if (response.data.success) {
+        setUploadedFiles(response.data.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching files:', error);
+    } finally {
+      setLoadingFiles(false);
     }
   };
 
-  const getWeightColor = (weight: string) => {
-    switch (weight) {
-      case 'Strategic': return colors.red;
-      case 'Core': return colors.accent;
-      case 'Support': return colors.teal;
-      default: return colors.text3;
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const file = result.assets[0];
+      
+      // Check file size (max 10MB)
+      if (file.size && file.size > 10 * 1024 * 1024) {
+        Alert.alert('Error', 'File size must be less than 10MB');
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Auto-fill college name if empty
+      if (!collegeName) {
+        setCollegeName('College of Computer Studies');
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick document');
     }
+  };
+
+  const uploadOPCR = async () => {
+    if (!selectedFile) {
+      Alert.alert('Error', 'Please select a PDF file');
+      return;
+    }
+
+    if (!collegeName.trim()) {
+      Alert.alert('Error', 'Please enter college name');
+      return;
+    }
+
+    if (!year.trim()) {
+      Alert.alert('Error', 'Please enter year');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+
+      const formData = new FormData();
+      
+      // Add file to FormData
+      const fileToUpload: any = {
+        uri: Platform.OS === 'ios' ? selectedFile.uri.replace('file://', '') : selectedFile.uri,
+        type: 'application/pdf',
+        name: selectedFile.name,
+      };
+      formData.append('file', fileToUpload);
+      formData.append('college_name', collegeName);
+      formData.append('year', year);
+      formData.append('period', period);
+
+      const response = await axios.post(
+        `${API_URL}/api/opcr/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+          },
+          onUploadProgress: (progressEvent) => {
+            const progress = progressEvent.total
+              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              : 0;
+            setUploadProgress(progress);
+          },
+        }
+      );
+
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          `OPCR uploaded successfully!\n\n` +
+          `Pages: ${response.data.data.extraction.total_pages}\n` +
+          `Text extracted: ${response.data.data.extraction.text_length} characters`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Reset form
+                setSelectedFile(null);
+                setCollegeName('');
+                setYear(new Date().getFullYear().toString());
+                setPeriod('MIDYEAR');
+                
+                // Refresh file list
+                fetchUploadedFiles();
+              },
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to upload OPCR';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const deleteFile = async (fileName: string) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this OPCR file?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await axios.delete(
+                `${API_URL}/api/opcr/files/${fileName}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+
+              if (response.data.success) {
+                Alert.alert('Success', 'File deleted successfully');
+                fetchUploadedFiles();
+              }
+            } catch (error: any) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete file');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const formatDate = (timestamp: number): string => {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      
-      {/* Topbar */}
-      <View style={styles.topbar}>
-        <View style={styles.topbarLeft}>
-          <TouchableOpacity 
-            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-            style={{ padding: 10 }}
-          >
-            <SvgIcon name="menu" size={24} color={colors.text} style={{}} />
-          </TouchableOpacity>
-          <View style={styles.topbarTitle}>
-            <Text style={styles.topbarTitleText}>Upload OPCR</Text>
-            <Text style={styles.topbarBreadcrumb}>Departmental Target Monitoring & Management</Text>
-          </View>
-        </View>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#1a73e8" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Upload OPCR</Text>
       </View>
 
-      <ScrollView 
-        style={{ flex: 1, backgroundColor: colors.bg }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      >
-        {/* Year Selection */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Select Academic Year</Text>
-          <Text style={styles.cardSubtitle}>Choose the year for this OPCR document</Text>
-          <View style={styles.yearGrid}>
-            {availableYears.map((year) => (
-              <TouchableOpacity
-                key={year}
-                style={[styles.yearCard, selectedYear === year && styles.yearCardActive]}
-                onPress={() => setSelectedYear(year)}
-              >
-                <Text style={[styles.yearText, selectedYear === year && styles.yearTextActive]}>
-                  {year}
-                </Text>
-                {selectedYear === year && (
-                  <View style={styles.yearCheck}>
-                    <SvgIcon name="checkCircle" size={20} color={colors.accent} style={{}} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+      {/* Upload Form */}
+      <View style={styles.uploadSection}>
+        <Text style={styles.sectionTitle}>Upload New OPCR PDF</Text>
+
+        {/* File Picker */}
+        <TouchableOpacity
+          style={styles.filePickerButton}
+          onPress={pickDocument}
+          disabled={uploading}
+        >
+          <Ionicons name="document-attach" size={24} color="#1a73e8" />
+          <Text style={styles.filePickerText}>
+            {selectedFile ? selectedFile.name : 'Select PDF File'}
+          </Text>
+        </TouchableOpacity>
+
+        {selectedFile && (
+          <View style={styles.selectedFileInfo}>
+            <Ionicons name="document-text" size={20} color="#666" />
+            <Text style={styles.fileName}>{selectedFile.name}</Text>
+            <Text style={styles.fileSize}>
+              {formatFileSize(selectedFile.size || 0)}
+            </Text>
+          </View>
+        )}
+
+        {/* College Name Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>College Name</Text>
+          <View style={styles.input}>
+            <Text style={styles.inputText}>{collegeName || 'Enter college name'}</Text>
           </View>
         </View>
 
-        {/* Upload Section */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Step 1: Upload OPCR Document</Text>
-          <Text style={styles.cardSubtitle}>Upload PDF or Excel format</Text>
-          
-          <TouchableOpacity style={styles.uploadArea} onPress={handleFileSelect}>
-            <SvgIcon name="document" size={48} color={colors.accent} style={{}} />
-            <Text style={styles.uploadText}>
-              {uploadedFile ? uploadedFile.name : 'Click to select OPCR file'}
-            </Text>
-            {uploadedFile && <Text style={styles.uploadSize}>{uploadedFile.size}</Text>}
-            <Text style={styles.uploadHint}>Supported: PDF, Excel (.xlsx, .xls)</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sampleBtn} onPress={loadSampleData}>
-            <SvgIcon name="zap" size={18} color={colors.accent} style={{}} />
-            <Text style={styles.sampleBtnText}>Load Sample Data (Demo)</Text>
-          </TouchableOpacity>
+        {/* Year Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Year</Text>
+          <View style={styles.input}>
+            <Text style={styles.inputText}>{year}</Text>
+          </View>
         </View>
 
-        {/* Extracted Targets */}
-        {extractedTargets.length > 0 && (
-          <>
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.cardTitle}>Step 2: Review Extracted Targets ({extractedTargets.length})</Text>
+        {/* Period Selector */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Period</Text>
+          <View style={styles.periodSelector}>
+            <TouchableOpacity
+              style={[
+                styles.periodButton,
+                period === 'MIDYEAR' && styles.periodButtonActive,
+              ]}
+              onPress={() => setPeriod('MIDYEAR')}
+              disabled={uploading}
+            >
+              <Text
+                style={[
+                  styles.periodButtonText,
+                  period === 'MIDYEAR' && styles.periodButtonTextActive,
+                ]}
+              >
+                Midyear
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.periodButton,
+                period === 'YEAR_END' && styles.periodButtonActive,
+              ]}
+              onPress={() => setPeriod('YEAR_END')}
+              disabled={uploading}
+            >
+              <Text
+                style={[
+                  styles.periodButtonText,
+                  period === 'YEAR_END' && styles.periodButtonTextActive,
+                ]}
+              >
+                Year End
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Upload Progress */}
+        {uploading && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{uploadProgress}%</Text>
+          </View>
+        )}
+
+        {/* Upload Button */}
+        <TouchableOpacity
+          style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
+          onPress={uploadOPCR}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="cloud-upload" size={20} color="#fff" />
+              <Text style={styles.uploadButtonText}>Upload OPCR</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Uploaded Files List */}
+      <View style={styles.filesSection}>
+        <Text style={styles.sectionTitle}>Uploaded OPCR Files</Text>
+
+        {loadingFiles ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1a73e8" />
+          </View>
+        ) : uploadedFiles.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="folder-open-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>No OPCR files uploaded yet</Text>
+          </View>
+        ) : (
+          uploadedFiles.map((file, index) => (
+            <View key={index} style={styles.fileCard}>
+              <View style={styles.fileCardHeader}>
+                <Ionicons name="document-text" size={24} color="#1a73e8" />
+                <View style={styles.fileCardInfo}>
+                  <Text style={styles.fileCardName} numberOfLines={1}>
+                    {file.file_name}
+                  </Text>
+                  <Text style={styles.fileCardMeta}>
+                    {file.college_name} • {file.year} • {file.period}
+                  </Text>
+                  <Text style={styles.fileCardDate}>
+                    {formatDate(file.uploaded_at)}
+                  </Text>
                 </View>
-                <TouchableOpacity 
-                  style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
-                  onPress={handleSaveTargets}
-                  disabled={isSaving}
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => deleteFile(file.file_name)}
                 >
-                  {isSaving ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <SvgIcon name="checkCircle" size={18} color="#fff" style={{}} />
-                  )}
-                  <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save to System'}</Text>
+                  <Ionicons name="trash-outline" size={20} color="#f44336" />
                 </TouchableOpacity>
               </View>
-
-              {/* Summary Stats */}
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{extractedTargets.filter(t => t.weight === 'Strategic').length}</Text>
-                  <Text style={styles.statLabel}>Strategic</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{extractedTargets.filter(t => t.weight === 'Core').length}</Text>
-                  <Text style={styles.statLabel}>Core</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{extractedTargets.filter(t => t.weight === 'Support').length}</Text>
-                  <Text style={styles.statLabel}>Support</Text>
-                </View>
-              </View>
             </View>
-
-            {/* Target Cards */}
-            {extractedTargets.map((target, index) => (
-              <View key={index} style={styles.targetCard}>
-                <View style={styles.targetHeader}>
-                  <View style={styles.targetId}>
-                    <Text style={styles.targetIdText}>{target.id}</Text>
-                  </View>
-                  <View style={[styles.weightBadge, { backgroundColor: `${getWeightColor(target.weight)}20` }]}>
-                    <Text style={[styles.weightText, { color: getWeightColor(target.weight) }]}>
-                      {target.weight}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.targetKRA}>{target.kra}</Text>
-                <Text style={styles.targetFunction}>{target.function}</Text>
-                <Text style={styles.targetIndicator}>{target.indicator}</Text>
-                <View style={styles.targetMeta}>
-                  <Text style={styles.metaText}>Target: {target.targetValue}</Text>
-                  <Text style={styles.metaText}>Period: {target.period}</Text>
-                  <Text style={styles.metaText}>Ratings: {target.ratingDimensions.join(', ')}</Text>
-                </View>
-                <View style={styles.accountableSection}>
-                  <Text style={styles.accountableLabel}>Accountable ({target.accountable.length}):</Text>
-                  <View style={styles.accountableList}>
-                    {target.accountable.map((person, idx) => (
-                      <View key={idx} style={styles.accountableBadge}>
-                        <Text style={styles.accountableName}>{person}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            ))}
-          </>
+          ))
         )}
-
-        {/* Empty State */}
-        {extractedTargets.length === 0 && (
-          <View style={styles.emptyState}>
-            <SvgIcon name="document" size={64} color={colors.text3} style={{}} />
-            <Text style={styles.emptyText}>No OPCR targets loaded</Text>
-            <Text style={styles.emptyHint}>Upload a document or load sample data to get started</Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: '#f5f5f5',
   },
-  topbar: {
-    backgroundColor: colors.bg2,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 48,
+    borderBottomColor: '#e0e0e0',
   },
-  topbarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+  backButton: {
+    marginRight: 16,
   },
-  topbarTitle: {
-    flex: 1,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
   },
-  topbarTitleText: {
+  uploadSection: {
+    backgroundColor: '#fff',
+    margin: 16,
+    padding: 16,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  topbarBreadcrumb: {
-    fontSize: 11,
-    color: colors.text3,
-    marginTop: 2,
-  },
-  card: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
+  filePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#f0f7ff',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#1a73e8',
+    borderStyle: 'dashed',
+    marginBottom: 16,
+  },
+  filePickerText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#1a73e8',
+    fontWeight: '500',
+  },
+  selectedFileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  fileName: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#333',
+  },
+  fileSize: {
+    fontSize: 12,
+    color: '#666',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
     marginBottom: 8,
   },
-  cardSubtitle: {
-    fontSize: 14,
-    color: colors.text2,
-    marginBottom: 16,
+  input: {
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  yearGrid: {
+  inputText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  periodSelector: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
   },
-  yearCard: {
+  periodButton: {
     flex: 1,
-    minWidth: 80,
-    backgroundColor: colors.bg3,
-    borderWidth: 2,
-    borderColor: colors.border,
+    padding: 12,
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
-    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     alignItems: 'center',
-    position: 'relative',
   },
-  yearCardActive: {
-    borderColor: colors.accent,
-    backgroundColor: `${colors.accent}15`,
+  periodButtonActive: {
+    backgroundColor: '#1a73e8',
+    borderColor: '#1a73e8',
   },
-  yearText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text2,
+  periodButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
-  yearTextActive: {
-    color: colors.accent,
+  periodButtonTextActive: {
+    color: '#fff',
   },
-  yearCheck: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
+  progressContainer: {
+    marginBottom: 16,
   },
-  uploadArea: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    borderRadius: 12,
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#1a73e8',
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#1a73e8',
+    borderRadius: 8,
+    gap: 8,
+  },
+  uploadButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  filesSection: {
+    backgroundColor: '#fff',
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  loadingContainer: {
     padding: 32,
     alignItems: 'center',
-    backgroundColor: colors.bg,
-    marginBottom: 12,
   },
-  uploadText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  uploadSize: {
-    fontSize: 13,
-    color: colors.text3,
-    marginTop: 4,
-  },
-  uploadHint: {
-    fontSize: 12,
-    color: colors.text3,
-    marginTop: 8,
-  },
-  sampleBtn: {
-    flexDirection: 'row',
+  emptyContainer: {
+    padding: 32,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.bg,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  sampleBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.green,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  saveBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  saveBtnDisabled: {
-    opacity: 0.6,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 16,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.text3,
-    marginTop: 4,
-  },
-  targetCard: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  targetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  targetId: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  targetIdText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  weightBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  weightText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  targetKRA: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.accent,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  targetFunction: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  targetIndicator: {
-    fontSize: 13,
-    color: colors.text2,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  targetMeta: {
-    marginBottom: 12,
-  },
-  metaText: {
-    fontSize: 12,
-    color: colors.text3,
-    marginBottom: 4,
-  },
-  accountableSection: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  accountableLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text3,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  accountableList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  accountableBadge: {
-    backgroundColor: colors.bg3,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  accountableName: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.text2,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 64,
-    paddingHorizontal: 32,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text2,
     marginTop: 16,
-    textAlign: 'center',
+    fontSize: 16,
+    color: '#999',
   },
-  emptyHint: {
+  fileCard: {
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  fileCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fileCardInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  fileCardName: {
     fontSize: 14,
-    color: colors.text3,
-    marginTop: 8,
-    textAlign: 'center',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  fileCardMeta: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  fileCardDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  deleteButton: {
+    padding: 8,
   },
 });
