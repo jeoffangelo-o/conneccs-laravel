@@ -8,6 +8,7 @@ class OPCRParser
 {
     private $currentFunctionType = null;
     private $currentMFO = null;
+    private $currentMFONumber = null;
     
     /**
      * Parse OPCR text and extract structured data
@@ -55,7 +56,7 @@ class OPCRParser
     private function extractCollege(string $text): ?string
     {
         // Look for "College of" pattern
-        if (preg_match('/College of ([^\n]+)/i', $text, $matches)) {
+        if (preg_match('/College of ([^\n,]+)/i', $text, $matches)) {
             return trim($matches[0]);
         }
         
@@ -70,13 +71,11 @@ class OPCRParser
      */
     public function extractPeriod(string $text): string
     {
-        // Look for period patterns
+        // Look for period patterns in header
         $patterns = [
-            '/January\s*-\s*June/i' => 'Jan-Jun',
-            '/July\s*-\s*December/i' => 'Jul-Dec',
-            '/January\s*-\s*December/i' => 'Jan-Dec',
-            '/Jan\s*-\s*Jun/i' => 'Jan-Jun',
-            '/Jul\s*-\s*Dec/i' => 'Jul-Dec',
+            '/January\s*to\s*June/i' => 'Jan-Jun',
+            '/July\s*to\s*December/i' => 'Jul-Dec',
+            '/January\s*to\s*December/i' => 'Jan-Dec',
         ];
 
         foreach ($patterns as $pattern => $period) {
@@ -86,19 +85,12 @@ class OPCRParser
             }
         }
 
-        // Check for "Midyear" or "Year-end"
-        if (preg_match('/midyear/i', $text)) {
-            return 'Jan-Jun';
-        } elseif (preg_match('/year[\s-]*end/i', $text)) {
-            return 'Jul-Dec';
-        }
-
         return 'Jan-Dec'; // Default to full year
     }
 
     /**
-     * Extract Major Final Outputs (MFOs) / Principal Activities and Programs (PAPs)
-     * MFOs are in column 1 with numbering like: 1.1, 1.2, 2.1, etc.
+     * Extract Major Final Outputs (MFOs)
+     * Pattern: "1. Early Procurement and Utilization" followed by "of Budget" on next line
      *
      * @param string $text
      * @return array
@@ -108,58 +100,144 @@ class OPCRParser
         $mfos = [];
         $lines = explode("\n", $text);
         
-        $currentType = null; // Strategic, Core, or Support
+        $currentType = null;
+        $inMFOSection = false;
+        $collectingMFO = false;
+        $currentMFOText = '';
+        $currentMFONumber = null;
         
-        foreach ($lines as $lineNum => $line) {
-            $line = trim($line);
+        for ($i = 0; $i < count($lines); $i++) {
+            $line = trim($lines[$i]);
             
             // Skip empty lines
             if (empty($line)) {
                 continue;
             }
             
-            // Detect function type headers with percentages
-            if (preg_match('/STRATEGIC\s+FUNCTION.*?(\d+)%/i', $line, $matches)) {
+            // Detect function type headers
+            if (preg_match('/STRATEGIC\s+FUNCTION.*?(\d+)%/i', $line)) {
                 $currentType = 'Strategic';
-                Log::debug('Entering Strategic Functions section', ['percentage' => $matches[1]]);
+                $inMFOSection = true;
+                Log::debug('Entering Strategic Functions section');
                 continue;
-            } elseif (preg_match('/CORE\s+FUNCTION.*?(\d+)%/i', $line, $matches)) {
+            } elseif (preg_match('/CORE\s+FUNCTION.*?(\d+)%/i', $line)) {
                 $currentType = 'Core';
-                Log::debug('Entering Core Functions section', ['percentage' => $matches[1]]);
+                $inMFOSection = true;
+                Log::debug('Entering Core Functions section');
                 continue;
-            } elseif (preg_match('/SUPPORT\s+FUNCTION.*?(\d+)%/i', $line, $matches)) {
+            } elseif (preg_match('/SUPPORT\s+FUNCTION.*?(\d+)%/i', $line)) {
                 $currentType = 'Support';
-                Log::debug('Entering Support Functions section', ['percentage' => $matches[1]]);
+                $inMFOSection = true;
+                Log::debug('Entering Support Functions section');
                 continue;
             }
             
-            // Look for MFO pattern: starts with decimal numbering like "1.1", "1.2", "2.1"
-            // Followed by capital letters (main MFO title)
-            if (preg_match('/^(\d+\.\d+)\s+([A-Z][A-Za-z\s,\-\/]+?)(?:\s|$)/i', $line, $matches)) {
-                $code = $matches[1];
-                $description = trim($matches[2]);
-                
-                // Only add if description is substantial (more than just a few characters)
-                if (strlen($description) > 10) {
+            // Stop collecting MFOs when we hit certain markers
+            if (preg_match('/Total Overall Rating|CHARMANE RECAH|Performance Management Team/i', $line)) {
+                $inMFOSection = false;
+                break;
+            }
+            
+            if (!$inMFOSection) {
+                continue;
+            }
+            
+            // Look for MFO pattern: "1. " or "2. " etc at start of line
+            if (preg_match('/^(\d+)\.\s+(.+)$/i', $line, $matches)) {
+                // Save previous MFO if collecting
+                if ($collectingMFO && !empty($currentMFOText)) {
                     $mfos[] = [
-                        'code' => $code,
-                        'description' => $description,
+                        'code' => $currentMFONumber,
+                        'description' => $this->cleanMFODescription($currentMFOText),
                         'type' => $currentType ?? 'Core',
-                        'line_number' => $lineNum + 1,
                     ];
                     
-                    $this->currentMFO = $code;
-                    
-                    Log::debug('MFO found', [
-                        'code' => $code,
-                        'mfo' => substr($description, 0, 50),
-                        'type' => $currentType ?? 'Core',
+                    Log::debug('MFO saved', [
+                        'code' => $currentMFONumber,
+                        'description' => substr($currentMFOText, 0, 60),
                     ]);
+                }
+                
+                // Start collecting new MFO
+                $currentMFONumber = $matches[1];
+                $currentMFOText = $matches[2];
+                $collectingMFO = true;
+                
+                continue;
+            }
+            
+            // If we're collecting an MFO, check if we should continue or stop
+            if ($collectingMFO) {
+                // Stop if we hit these patterns
+                if (preg_match('/^[a-z]\d?\./i', $line) || // Target line (a., b., etc)
+                    preg_match('/^[A-Z][A-Z\s]+,\s*[A-Z]/i', $line) || // All caps names like "AMADO A. OLIVA"
+                    preg_match('/^[A-Z][a-z]+,\s*[A-Z][a-z]+,/i', $line) || // Name lists "Onesa, Gastilo,"
+                    preg_match('/CSPC-F-|ANNEX|Effectivity Date/i', $line) || // Document codes
+                    preg_match('/SUCCESS INDICATORS|Allotted|Budget|Accountable|Rating|OPCR/i', $line) || // Table headers
+                    preg_match('/^\d+\s+target/i', $line)) { // Target count lines
+                    
+                    // Save current MFO and stop collecting
+                    if (!empty($currentMFOText)) {
+                        $mfos[] = [
+                            'code' => $currentMFONumber,
+                            'description' => $this->cleanMFODescription($currentMFOText),
+                            'type' => $currentType ?? 'Core',
+                        ];
+                        
+                        Log::debug('MFO saved (stopped at marker)', [
+                            'code' => $currentMFONumber,
+                            'description' => substr($currentMFOText, 0, 60),
+                            'stopped_at' => substr($line, 0, 40),
+                        ]);
+                    }
+                    
+                    $collectingMFO = false;
+                    $currentMFOText = '';
+                    continue;
+                }
+                
+                // Otherwise, append to current MFO description
+                // But only if it looks like a continuation (starts with lowercase or is short)
+                if (preg_match('/^[a-z]/', $line) || strlen($line) < 60) {
+                    $currentMFOText .= ' ' . $line;
                 }
             }
         }
         
+        // Save last MFO if still collecting
+        if ($collectingMFO && !empty($currentMFOText)) {
+            $mfos[] = [
+                'code' => $currentMFONumber,
+                'description' => $this->cleanMFODescription($currentMFOText),
+                'type' => $currentType ?? 'Core',
+            ];
+        }
+        
         return $mfos;
+    }
+    
+    /**
+     * Clean MFO description by removing unwanted text
+     */
+    private function cleanMFODescription(string $description): string
+    {
+        // Remove document codes
+        $description = preg_replace('/CSPC-F-[^\s]+/', '', $description);
+        $description = preg_replace('/ANNEX\s+[A-Z]/', '', $description);
+        
+        // Remove person names (PhD, MIT, DBA titles)
+        $description = preg_replace('/[A-Z][A-Z\s\.]+,?\s*(PhD|MIT|DBA|Jr\.)/', '', $description);
+        
+        // Remove name lists
+        $description = preg_replace('/[A-Z][a-z]+,\s*[A-Z][a-z]+.*$/', '', $description);
+        
+        // Remove "target(s)" mentions
+        $description = preg_replace('/\d+\s+target\(s\)/', '', $description);
+        
+        // Clean up extra whitespace
+        $description = preg_replace('/\s+/', ' ', $description);
+        
+        return trim($description);
     }
 
     /**
@@ -178,7 +256,7 @@ class OPCRParser
 
     /**
      * Extract targets/success indicators from OPCR
-     * Targets are in column 2 with hierarchical numbering like: 1.1.1, 1.1.2, 1.2.1, etc.
+     * Pattern: "a. Description" or "a1. Description" or "b2. Description"
      *
      * @param string $text
      * @param array $pages
@@ -187,105 +265,131 @@ class OPCRParser
     public function extractTargets(string $text, array $pages): array
     {
         $targets = [];
+        $lines = explode("\n", $text);
+        
         $currentMFO = null;
         $currentType = null;
+        $collectingTarget = false;
+        $currentTargetText = '';
+        $currentTargetCode = null;
+        $currentLineStart = 0;
         
-        foreach ($pages as $pageData) {
-            $pageText = $pageData['text'];
-            $lines = explode("\n", $pageText);
+        for ($i = 0; $i < count($lines); $i++) {
+            $line = trim($lines[$i]);
             
-            foreach ($lines as $line) {
-                $originalLine = $line;
-                $line = trim($line);
-                
-                // Skip very short lines
-                if (strlen($line) < 15) {
-                    continue;
+            // Skip empty lines
+            if (empty($line)) {
+                continue;
+            }
+            
+            // Track function type
+            if (preg_match('/STRATEGIC\s+FUNCTION/i', $line)) {
+                $currentType = 'Strategic';
+                continue;
+            } elseif (preg_match('/CORE\s+FUNCTION/i', $line)) {
+                $currentType = 'Core';
+                continue;
+            } elseif (preg_match('/SUPPORT\s+FUNCTION/i', $line)) {
+                $currentType = 'Support';
+                continue;
+            }
+            
+            // Track current MFO (pattern: "1. " or "2. " at line start)
+            if (preg_match('/^(\d+)\.\s+/i', $line, $matches)) {
+                $currentMFO = $matches[1];
+                continue;
+            }
+            
+            // Look for target pattern: "a.", "a1.", "a2.", "b.", "b1.", etc.
+            if (preg_match('/^([a-z]\d*)\.\s+(.+)$/i', $line, $matches)) {
+                // Save previous target if collecting
+                if ($collectingTarget && !empty($currentTargetText)) {
+                    $this->saveTarget($targets, $currentTargetCode, $currentTargetText, $currentMFO, $currentType, $currentLineStart, $lines, $i);
                 }
                 
-                // Track function type
-                if (preg_match('/STRATEGIC\s+FUNCTION/i', $line)) {
-                    $currentType = 'Strategic';
-                    continue;
-                } elseif (preg_match('/CORE\s+FUNCTION/i', $line)) {
-                    $currentType = 'Core';
-                    continue;
-                } elseif (preg_match('/SUPPORT\s+FUNCTION/i', $line)) {
-                    $currentType = 'Support';
-                    continue;
-                }
+                // Start new target
+                $currentTargetCode = $matches[1];
+                $currentTargetText = $matches[2];
+                $collectingTarget = true;
+                $currentLineStart = $i;
                 
-                // Track current MFO (pattern: 1.1, 1.2, etc.)
-                if (preg_match('/^(\d+\.\d+)\s+/', $line, $matches)) {
-                    $currentMFO = $matches[1];
-                }
-                
-                // Look for target/success indicator pattern
-                // Pattern: 1.1.1, 1.2.3, 1.3.1.1 (3 or 4 level numbering)
-                if (preg_match('/^(\d+\.\d+\.\d+(?:\.\d+)?)\s+(.+?)$/i', $line, $matches)) {
-                    $targetCode = $matches[1];
-                    $description = trim($matches[2]);
+                continue;
+            }
+            
+            // If collecting target, check if line is continuation or new section
+            if ($collectingTarget) {
+                // Stop if we hit certain markers
+                if (preg_match('/^(x\s+)+/i', $line) || // Rating marks
+                    preg_match('/^(Jan-Dec|Jan-Jun|Jul-Dec)/i', $line) || // Period
+                    preg_match('/^[A-Z][a-z]+,\s*[A-Z]/i', $line) || // Names list
+                    preg_match('/^\d+\./i', $line) || // New MFO
+                    preg_match('/^[a-z]\d?\./i', $line)) { // New target
                     
-                    // Extract accountable persons (usually appear after description)
-                    $accountable = $this->extractAccountableFromLine($originalLine);
-                    
-                    // Extract period (Jan-Dec, Jan-Jun, Jul-Dec) from end of line
-                    $period = $this->extractPeriodFromLine($line);
-                    
-                    // Extract ratings (x marks in Q, E, T, A columns)
-                    $ratings = $this->extractRatingsFromLine($originalLine);
-                    
-                    // Clean description - remove trailing names, dates, and markers
-                    $description = $this->cleanTargetDescription($description);
-                    
-                    if (strlen($description) > 10) {
-                        $targets[] = [
-                            'code' => $targetCode,
-                            'mfo_code' => $currentMFO,
-                            'function_type' => $currentType ?? 'Core',
-                            'description' => $description,
-                            'accountable' => $accountable,
-                            'period' => $period,
-                            'ratings' => $ratings,
-                            'page' => $pageData['page'],
-                        ];
-                        
-                        Log::debug('Target extracted', [
-                            'code' => $targetCode,
-                            'mfo' => $currentMFO,
-                            'description' => substr($description, 0, 60),
-                        ]);
+                    // Save current target
+                    if (!empty($currentTargetText)) {
+                        $this->saveTarget($targets, $currentTargetCode, $currentTargetText, $currentMFO, $currentType, $currentLineStart, $lines, $i);
                     }
+                    
+                    $collectingTarget = false;
+                    $currentTargetText = '';
+                    
+                    // Re-check if this line starts a new target
+                    if (preg_match('/^([a-z]\d*)\.\s+(.+)$/i', $line, $matches)) {
+                        $currentTargetCode = $matches[1];
+                        $currentTargetText = $matches[2];
+                        $collectingTarget = true;
+                        $currentLineStart = $i;
+                    }
+                    
+                    continue;
                 }
                 
-                // Also catch bullet points or sub-items without full numbering
-                // Pattern: • description or - description
-                elseif (preg_match('/^[•\-\*]\s+(.+?)$/i', $line, $matches)) {
-                    $description = trim($matches[1]);
-                    
-                    if ($this->looksLikeTarget($description) && strlen($description) > 15) {
-                        $accountable = $this->extractAccountableFromLine($originalLine);
-                        $period = $this->extractPeriodFromLine($line);
-                        $ratings = $this->extractRatingsFromLine($originalLine);
-                        
-                        $description = $this->cleanTargetDescription($description);
-                        
-                        $targets[] = [
-                            'code' => null,
-                            'mfo_code' => $currentMFO,
-                            'function_type' => $currentType ?? 'Core',
-                            'description' => $description,
-                            'accountable' => $accountable,
-                            'period' => $period,
-                            'ratings' => $ratings,
-                            'page' => $pageData['page'],
-                        ];
-                    }
-                }
+                // Otherwise, append to current target description
+                $currentTargetText .= ' ' . $line;
             }
         }
         
+        // Save last target if still collecting
+        if ($collectingTarget && !empty($currentTargetText)) {
+            $this->saveTarget($targets, $currentTargetCode, $currentTargetText, $currentMFO, $currentType, $currentLineStart, $lines, count($lines));
+        }
+        
         return $targets;
+    }
+    
+    /**
+     * Helper to save a target with metadata extraction
+     */
+    private function saveTarget(array &$targets, string $code, string $description, $mfoCode, $type, int $lineStart, array $lines, int $lineEnd): void
+    {
+        // Extract metadata from surrounding lines
+        $contextLines = array_slice($lines, $lineStart, min(5, $lineEnd - $lineStart));
+        $contextText = implode(' ', $contextLines);
+        
+        $accountable = $this->extractAccountableFromLine($contextText);
+        $period = $this->extractPeriodFromLine($contextText);
+        $ratings = $this->extractRatingsFromLine($contextText);
+        
+        $description = $this->cleanTargetDescription($description);
+        
+        if (strlen($description) > 10) {
+            $targets[] = [
+                'code' => $code,
+                'mfo_code' => $mfoCode,
+                'function_type' => $type ?? 'Core',
+                'description' => $description,
+                'accountable' => $accountable,
+                'period' => $period,
+                'ratings' => $ratings,
+                'page' => 0, // Line-based, not page-based
+            ];
+            
+            Log::debug('Target extracted', [
+                'code' => $code,
+                'mfo' => $mfoCode,
+                'description' => substr($description, 0, 60),
+            ]);
+        }
     }
     
     /**
@@ -296,14 +400,12 @@ class OPCRParser
         // Remove period indicators at the end
         $description = preg_replace('/\s+(Jan-Dec|Jan-Jun|Jul-Dec)\s*$/i', '', $description);
         
-        // Remove single letters (likely column markers)
+        // Remove rating markers
         $description = preg_replace('/\s+[QETA]\s*$/i', '', $description);
-        
-        // Remove trailing x marks
         $description = preg_replace('/\s+x\s*$/i', '', $description);
         
-        // Remove trailing numbers that look like dates
-        $description = preg_replace('/\s+\d{4}\s*$/', '', $description);
+        // Remove numbers that look like page numbers or years
+        $description = preg_replace('/\s+\d{1,4}\s*$/', '', $description);
         
         // Clean up extra whitespace
         $description = preg_replace('/\s+/', ' ', $description);

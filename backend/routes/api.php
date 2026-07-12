@@ -1,78 +1,54 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChannelController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OPCRUploadController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
-
-// Public routes
-Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/google', [AuthController::class, 'googleAuth']);
-});
-
-// Test endpoint (public for testing)
-Route::get('/opcr/test', function () {
+// Test endpoint
+Route::get('/test', function () {
     return response()->json([
         'success' => true,
-        'message' => 'OPCR endpoint is working',
-        'server_time' => now()->toISOString(),
-        'max_upload_size' => ini_get('upload_max_filesize'),
-        'post_max_size' => ini_get('post_max_size'),
+        'message' => 'API is working',
+        'timestamp' => now()->toISOString(),
     ]);
 });
 
+// Public routes
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::prefix('auth')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/user', [AuthController::class, 'user']);
-    });
+    // Auth routes
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
     
     // Channel routes
-    Route::prefix('channels')->group(function () {
-        Route::get('/', [ChannelController::class, 'index']);
-        Route::post('/', [ChannelController::class, 'store']);
-        Route::get('/{id}', [ChannelController::class, 'show']);
-        Route::get('/{id}/members', [ChannelController::class, 'getMembers']);
-        Route::get('/{id}/messages', [ChannelController::class, 'getMessages']);
-        Route::post('/{id}/messages', [ChannelController::class, 'sendMessage']);
-        Route::put('/{id}/read', [ChannelController::class, 'markAsRead']);
-        Route::put('/{channelId}/messages/{messageId}', [ChannelController::class, 'updateMessage']);
-        Route::delete('/{channelId}/messages/{messageId}', [ChannelController::class, 'deleteMessage']);
-        Route::post('/{channelId}/messages/{messageId}/react', [ChannelController::class, 'toggleReaction']);
-        Route::post('/upload', [ChannelController::class, 'uploadAttachment']);
-    });
+    Route::get('/channels', [ChannelController::class, 'index']);
+    Route::post('/channels', [ChannelController::class, 'store']);
+    Route::get('/channels/{channel}', [ChannelController::class, 'show']);
+    Route::post('/channels/{channel}/messages', [ChannelController::class, 'sendMessage']);
+    Route::get('/channels/{channel}/messages', [ChannelController::class, 'getMessages']);
+    Route::post('/messages/{message}/react', [ChannelController::class, 'reactToMessage']);
     
     // Notification routes
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [NotificationController::class, 'index']);
-        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
-        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-        Route::post('/clear-read', [NotificationController::class, 'clearRead']);
-        Route::get('/preferences', [NotificationController::class, 'getPreferences']);
-        Route::put('/preferences', [NotificationController::class, 'updatePreferences']);
-        Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
-        Route::put('/{id}/unread', [NotificationController::class, 'markAsUnread']);
-        Route::delete('/{id}', [NotificationController::class, 'destroy']);
-    });
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     
-    // OPCR Upload routes
+    // OPCR routes
     Route::prefix('opcr')->group(function () {
+        Route::get('/test', [OPCRUploadController::class, 'test']);
         Route::post('/upload', [OPCRUploadController::class, 'upload']);
-        Route::get('/files', [OPCRUploadController::class, 'index']);
+        Route::get('/list', [OPCRUploadController::class, 'index']);
         Route::get('/preview/{fileName}', [OPCRUploadController::class, 'preview']);
         Route::get('/parse/{fileName}', [OPCRUploadController::class, 'parse']);
         Route::get('/download/{fileName}', [OPCRUploadController::class, 'download']);
-        Route::delete('/files/{fileName}', [OPCRUploadController::class, 'destroy']);
+        Route::delete('/{fileName}', [OPCRUploadController::class, 'destroy']);
+        
+        // New: Save edited/corrected OPCR data
+        Route::post('/save-parsed', [OPCRUploadController::class, 'saveParsedData']);
     });
 });
