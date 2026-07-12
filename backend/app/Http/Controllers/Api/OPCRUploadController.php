@@ -31,7 +31,6 @@ class OPCRUploadController extends Controller
             // Validate the request
             $validator = Validator::make($request->all(), [
                 'file' => 'required|file|mimes:pdf|max:10240', // Max 10MB
-                'college_name' => 'required|string|max:255',
                 'year' => 'required|string|max:10',
                 'period' => 'required|in:MIDYEAR,YEAR_END',
             ]);
@@ -45,7 +44,7 @@ class OPCRUploadController extends Controller
             }
 
             $file = $request->file('file');
-            $collegeName = $request->input('college_name');
+            $collegeName = $request->input('college_name', 'College of Computer Studies');
             $year = $request->input('year');
             $period = $request->input('period');
 
@@ -62,8 +61,7 @@ class OPCRUploadController extends Controller
             $timestamp = now()->format('YmdHis');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $fileName = sprintf(
-                '%s_%s_%s_%s.pdf',
-                str_replace(' ', '_', $collegeName),
+                'CCS_%s_%s_%s.pdf',
                 $year,
                 $period,
                 $timestamp
