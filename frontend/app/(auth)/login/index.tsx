@@ -190,7 +190,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
                 onPress={() => {
-                  setEmail('dean@cspc.edu.ph');
+                  setEmail('dean.onesa@cspc.edu.ph');
                   setPassword('password123');
                 }}
               >
@@ -199,7 +199,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
                 onPress={() => {
-                  setEmail('secretary@cspc.edu.ph');
+                  setEmail('secretary.admin@cspc.edu.ph');
                   setPassword('password123');
                 }}
               >
@@ -208,11 +208,29 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
                 onPress={() => {
-                  setEmail('faculty@cspc.edu.ph');
+                  setEmail('chair.colle@cspc.edu.ph');
+                  setPassword('password123');
+                }}
+              >
+                <Text style={[styles.quickLoginButtonText, { color: colors.text }]}>Chair</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
+                onPress={() => {
+                  setEmail('john.benosa@cspc.edu.ph');
                   setPassword('password123');
                 }}
               >
                 <Text style={[styles.quickLoginButtonText, { color: colors.text }]}>Faculty</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.quickLoginButton, { backgroundColor: colors.bg2, borderColor: colors.border }]}
+                onPress={() => {
+                  setEmail('coordinator.santos@cspc.edu.ph');
+                  setPassword('password123');
+                }}
+              >
+                <Text style={[styles.quickLoginButtonText, { color: colors.text }]}>Coordinator</Text>
               </TouchableOpacity>
             </View>
           </View>
