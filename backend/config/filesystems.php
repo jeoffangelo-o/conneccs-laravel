@@ -38,6 +38,13 @@ return [
             'report' => false,
         ],
 
+        'opcr' => [
+            'driver' => 'local',
+            'root' => storage_path('app/opcr'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

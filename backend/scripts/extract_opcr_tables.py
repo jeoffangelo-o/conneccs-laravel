@@ -93,18 +93,23 @@ class OPCRTableExtractor:
         return table_regions
     
     def extract_text_with_layout(self, image):
-        """Extract text from image with layout information"""
+        """Extract text from image with layout information using improved OCR settings"""
+        # Use Tesseract with better configuration for tables
+        # --psm 6 = Assume a single uniform block of text (good for tables)
+        # --oem 3 = Use both legacy and LSTM OCR engines
+        custom_config = r'--oem 3 --psm 6'
+        
         # Use Tesseract with TSV output to get word positions
-        tsv_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, config='--psm 6')
+        tsv_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, config=custom_config)
         
         # Group text by rows (approximate Y positions)
         rows = {}
-        row_tolerance = 10  # pixels
+        row_tolerance = 15  # Increased tolerance for better row grouping
         
         for i in range(len(tsv_data['text'])):
             if tsv_data['text'][i].strip():
                 conf = int(tsv_data['conf'][i])
-                if conf > 30:  # Confidence threshold
+                if conf > 20:  # Lower confidence threshold to capture more text
                     x = tsv_data['left'][i]
                     y = tsv_data['top'][i]
                     w = tsv_data['width'][i]
@@ -145,79 +150,144 @@ class OPCRTableExtractor:
         return sorted_rows
     
     def parse_opcr_structure(self, rows):
-        """Parse OPCR structure from extracted text rows"""
+        """
+        Parse OPCR structure from extracted text rows
+        SIMPLIFIED: Focus on major sections only (numbers 1-9)
+        Sub-items can be added manually via correction interface
+        """
         mfos = []
         targets = []
         current_function_type = None
         current_mfo = None
+        current_mfo_code = None
         
-        for row in rows:
+        # Track seen MFO codes to avoid duplicates
+        seen_mfos = set()
+        
+        for i, row in enumerate(rows):
             line = row['text'].strip()
             
             if not line:
                 continue
             
-            # Detect function type
-            if 'STRATEGIC FUNCTION' in line.upper():
+            # Detect function type headers
+            line_upper = line.upper()
+            if 'STRATEGIC' in line_upper and 'FUNCTION' in line_upper:
                 current_function_type = 'Strategic'
                 continue
-            elif 'CORE FUNCTION' in line.upper():
+            elif 'CORE' in line_upper and 'FUNCTION' in line_upper:
                 current_function_type = 'Core'
                 continue
-            elif 'SUPPORT FUNCTION' in line.upper():
+            elif 'SUPPORT' in line_upper and 'FUNCTION' in line_upper:
                 current_function_type = 'Support'
                 continue
             
-            # Detect MFO (starts with number followed by dot and capital letter)
-            if len(line) > 0 and line[0].isdigit() and '. ' in line[:5]:
-                parts = line.split('. ', 1)
-                if len(parts) == 2:
-                    mfo_code = parts[0]
-                    mfo_desc = parts[1]
+            # Skip table headers and other non-data rows
+            if any(keyword in line_upper for keyword in ['SUCCESS INDICATOR', 'MFO/PAP', 'ALLOTTED BUDGET', 'ACCOUNTABLE', 'RATING', 'REMARKS', 'REVIEWED BY', 'APPROVED BY']):
+                continue
+            
+            # Import regex
+            import re
+            
+            # Detect MAJOR MFO: Single digit at start "1. " or "2. " etc
+            # This is what OCR can reliably detect
+            mfo_match = re.match(r'^(\d)\.\s+(.+)$', line)
+            if mfo_match:
+                mfo_code = mfo_match.group(1)
+                mfo_desc = mfo_match.group(2).strip()
+                
+                # Must have substantial description
+                if mfo_code not in seen_mfos and len(mfo_desc) > 15:
+                    seen_mfos.add(mfo_code)
+                    current_mfo_code = mfo_code
                     
                     current_mfo = {
                         'code': mfo_code,
                         'description': mfo_desc,
                         'type': current_function_type or 'Core',
-                        'targets': []
+                        'targets': [],
+                        'ocr_confidence': 'high',  # Major items are reliable
+                        'needs_review': False
                     }
                     mfos.append(current_mfo)
                 continue
             
-            # Detect target (starts with letter followed by dot)
-            if len(line) > 0 and line[0].isalpha() and '. ' in line[:5]:
-                parts = line.split('. ', 1)
-                if len(parts) == 2 and len(parts[0]) <= 3:
-                    target_code = parts[0]
-                    target_desc = parts[1]
-                    
-                    # Extract period (Jan-Dec, Jan-Jun, Jul-Dec)
-                    period = None
-                    if 'Jan-Dec' in target_desc:
-                        period = 'Jan-Dec'
-                    elif 'Jan-Jun' in target_desc:
-                        period = 'Jan-Jun'
-                    elif 'Jul-Dec' in target_desc:
-                        period = 'Jul-Dec'
+            # Detect SUB-ITEMS with decimal notation: "1.1 ", "1.4.3 ", etc.
+            # Mark these as needing review since they're harder to parse accurately
+            sub_item_match = re.match(r'^(\d+(?:\.\d+)+)\s+(.+)$', line)
+            if sub_item_match:
+                sub_code = sub_item_match.group(1)
+                sub_desc = sub_item_match.group(2).strip()
+                
+                if len(sub_desc) > 15:
+                    # Determine parent MFO (first digit)
+                    parent_code = sub_code.split('.')[0]
                     
                     target = {
-                        'code': target_code,
-                        'mfo_code': current_mfo['code'] if current_mfo else None,
+                        'code': sub_code,
+                        'mfo_code': parent_code,
                         'function_type': current_function_type or 'Core',
-                        'description': target_desc,
-                        'period': period,
+                        'description': sub_desc,
+                        'period': None,
                         'accountable': [],
-                        'ratings': {'Q': False, 'E': False, 'T': False, 'A': False}
+                        'ratings': {'Q': False, 'E': False, 'T': False, 'A': False},
+                        'ocr_confidence': 'medium',  # Sub-items less reliable
+                        'needs_review': True  # Flag for manual review
                     }
                     
+                    # Try to extract period
+                    full_text = ' '.join([w['text'] for w in row.get('words', [])])
+                    if 'Jan-Dec' in full_text or 'jan-dec' in full_text.lower():
+                        target['period'] = 'Jan-Dec'
+                    elif 'Jan-Jun' in full_text or 'jan-jun' in full_text.lower():
+                        target['period'] = 'Jan-Jun'
+                    elif 'Jul-Dec' in full_text or 'jul-dec' in full_text.lower():
+                        target['period'] = 'Jul-Dec'
+                    
                     targets.append(target)
-                    if current_mfo:
-                        current_mfo['targets'].append(target)
+                    
+                    # Try to add to parent MFO if it exists
+                    parent_mfo = next((m for m in mfos if m['code'] == parent_code), None)
+                    if parent_mfo:
+                        parent_mfo['targets'].append(target)
+                continue
+            
+            # Detect simple letter targets: "a. ", "b. ", etc
+            # These are typically under a numbered item
+            letter_match = re.match(r'^([a-z])\.\s+(.{20,})$', line, re.IGNORECASE)
+            if letter_match and current_mfo_code:
+                target_code = letter_match.group(1).lower()
+                target_desc = letter_match.group(2).strip()
+                
+                full_text = ' '.join([w['text'] for w in row.get('words', [])])
+                period = None
+                if 'Jan-Dec' in full_text or 'jan-dec' in full_text.lower():
+                    period = 'Jan-Dec'
+                elif 'Jan-Jun' in full_text or 'jan-jun' in full_text.lower():
+                    period = 'Jan-Jun'
+                elif 'Jul-Dec' in full_text or 'jul-dec' in full_text.lower():
+                    period = 'Jul-Dec'
+                
+                target = {
+                    'code': target_code,
+                    'mfo_code': current_mfo_code,
+                    'function_type': current_function_type or 'Core',
+                    'description': target_desc,
+                    'period': period,
+                    'accountable': [],
+                    'ratings': {'Q': False, 'E': False, 'T': False, 'A': False},
+                    'ocr_confidence': 'high',
+                    'needs_review': False
+                }
+                
+                targets.append(target)
+                if current_mfo:
+                    current_mfo['targets'].append(target)
         
         return mfos, targets
     
     def extract(self):
-        """Main extraction method"""
+        """Main extraction method with improved accuracy"""
         try:
             # Convert PDF to images
             images = self.convert_pdf_to_images()
@@ -236,6 +306,28 @@ class OPCRTableExtractor:
                 all_mfos.extend(mfos)
                 all_targets.extend(targets)
             
+            # Post-process: Remove duplicate MFOs (keep first occurrence)
+            unique_mfos = []
+            seen_codes = set()
+            for mfo in all_mfos:
+                if mfo['code'] not in seen_codes:
+                    seen_codes.add(mfo['code'])
+                    unique_mfos.append(mfo)
+            
+            # Post-process: Clean up descriptions (remove extra spaces, truncation marks)
+            for mfo in unique_mfos:
+                mfo['description'] = ' '.join(mfo['description'].split())  # Normalize whitespace
+                # Remove common OCR artifacts
+                mfo['description'] = mfo['description'].replace('|', '').replace('_', ' ')
+                
+                for target in mfo['targets']:
+                    target['description'] = ' '.join(target['description'].split())
+                    target['description'] = target['description'].replace('|', '').replace('_', ' ')
+            
+            for target in all_targets:
+                target['description'] = ' '.join(target['description'].split())
+                target['description'] = target['description'].replace('|', '').replace('_', ' ')
+            
             # Group MFOs by type
             mfos_by_type = {
                 'Strategic': [],
@@ -243,22 +335,29 @@ class OPCRTableExtractor:
                 'Support': []
             }
             
-            for mfo in all_mfos:
+            for mfo in unique_mfos:
                 mfo_type = mfo.get('type', 'Core')
                 mfos_by_type[mfo_type].append(mfo)
             
             return {
                 'success': True,
-                'mfos': all_mfos,
+                'mfos': unique_mfos,
                 'targets': all_targets,
                 'mfos_by_type': mfos_by_type,
                 'statistics': {
-                    'total_mfos': len(all_mfos),
+                    'total_mfos': len(unique_mfos),
                     'strategic_count': len(mfos_by_type['Strategic']),
                     'core_count': len(mfos_by_type['Core']),
                     'support_count': len(mfos_by_type['Support']),
                     'total_targets': len(all_targets),
-                    'pages_processed': len(images)
+                    'pages_processed': len(images),
+                    'high_confidence_count': len([t for t in all_targets if t.get('ocr_confidence') == 'high']),
+                    'needs_review_count': len([t for t in all_targets if t.get('needs_review')]),
+                },
+                'ocr_info': {
+                    'method': 'Tesseract OCR with table detection',
+                    'note': 'Major items (1., 2., 3.) have high confidence. Sub-items (1.1, 1.4.3) may need manual review.',
+                    'recommendation': 'Please review items marked "needs_review" for accuracy.'
                 }
             }
             

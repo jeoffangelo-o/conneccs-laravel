@@ -92,18 +92,20 @@ class OPCRUploadController extends Controller
                 $timestamp
             );
 
-            // Store the file in opcr directory
-            $filePath = $file->storeAs('opcr', $fileName);
-            $fullPath = Storage::path($filePath);
+            // Store the file in opcr directory using opcr disk
+            $filePath = $file->storeAs('', $fileName, 'opcr'); // Empty string for root of opcr disk
+            // Build full path - opcr disk root is storage/app/opcr
+            $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'opcr' . DIRECTORY_SEPARATOR . $fileName);
 
             Log::info('OPCR file stored', [
                 'storage_path' => $filePath,
                 'full_path' => $fullPath,
+                'file_exists' => file_exists($fullPath),
             ]);
 
             // Validate PDF
             if (!$this->parserService->isValidPdf($fullPath)) {
-                Storage::delete($filePath);
+                Storage::disk('opcr')->delete($fileName);
                 
                 return response()->json([
                     'success' => false,
@@ -161,8 +163,8 @@ class OPCRUploadController extends Controller
             ]);
 
             // Clean up file if it was uploaded
-            if (isset($filePath) && Storage::exists($filePath)) {
-                Storage::delete($filePath);
+            if (isset($fileName) && Storage::disk('opcr')->exists($fileName)) {
+                Storage::disk('opcr')->delete($fileName);
             }
 
             return response()->json([
@@ -181,11 +183,11 @@ class OPCRUploadController extends Controller
     public function index()
     {
         try {
-            $files = Storage::files('opcr');
+            $files = Storage::disk('opcr')->files('');
             
             $opcrs = collect($files)->map(function ($file) {
                 $fileName = basename($file);
-                $fullPath = Storage::path($file);
+                $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'opcr' . DIRECTORY_SEPARATOR . $fileName);
                 
                 // Parse filename to extract info
                 $parts = explode('_', pathinfo($fileName, PATHINFO_FILENAME));
@@ -217,8 +219,8 @@ class OPCRUploadController extends Controller
                 return [
                     'file_name' => $fileName,
                     'storage_path' => $file,
-                    'size' => Storage::size($file),
-                    'uploaded_at' => Storage::lastModified($file),
+                    'size' => Storage::disk('opcr')->size($file),
+                    'uploaded_at' => Storage::disk('opcr')->lastModified($file),
                     'college_name' => $parts[0] ?? null,
                     'year' => $parts[1] ?? null,
                     'period' => $parts[2] ?? null,
@@ -254,16 +256,16 @@ class OPCRUploadController extends Controller
     public function destroy(string $fileName)
     {
         try {
-            $filePath = 'opcr/' . $fileName;
+            $filePath = $fileName; // Just the filename since opcr disk root is already opcr folder
             
-            if (!Storage::exists($filePath)) {
+            if (!Storage::disk('opcr')->exists($filePath)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'OPCR file not found',
                 ], 404);
             }
 
-            Storage::delete($filePath);
+            Storage::disk('opcr')->delete($filePath);
             
             // Also delete raw text file if exists
             $rawTextFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_raw.txt';
@@ -306,16 +308,17 @@ class OPCRUploadController extends Controller
     public function preview(string $fileName)
     {
         try {
-            $filePath = 'opcr/' . $fileName;
+            $filePath = $fileName; // Just the filename since opcr disk root is already opcr folder
             
-            if (!Storage::exists($filePath)) {
+            if (!Storage::disk('opcr')->exists($filePath)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'OPCR file not found',
                 ], 404);
             }
 
-            $fullPath = Storage::path($filePath);
+            // Get absolute path
+            $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'opcr' . DIRECTORY_SEPARATOR . $fileName);
             
             // Get raw text
             $rawTextFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_raw.txt';
@@ -377,16 +380,17 @@ class OPCRUploadController extends Controller
     public function parse(string $fileName)
     {
         try {
-            $filePath = 'opcr/' . $fileName;
+            $filePath = $fileName; // Just the filename since opcr disk root is already opcr folder
             
-            if (!Storage::exists($filePath)) {
+            if (!Storage::disk('opcr')->exists($filePath)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'OPCR file not found',
                 ], 404);
             }
 
-            $fullPath = Storage::path($filePath);
+            // Get absolute path
+            $fullPath = storage_path('app' . DIRECTORY_SEPARATOR . 'opcr' . DIRECTORY_SEPARATOR . $fileName);
             
             // Get raw text
             $rawTextFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_raw.txt';
@@ -531,9 +535,9 @@ class OPCRUploadController extends Controller
     public function download(string $fileName)
     {
         try {
-            $filePath = 'opcr/' . $fileName;
+            $filePath = $fileName; // Just the filename since opcr disk root is already opcr folder
             
-            if (!Storage::exists($filePath)) {
+            if (!Storage::disk('opcr')->exists($filePath)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'OPCR file not found',
@@ -545,7 +549,7 @@ class OPCRUploadController extends Controller
                 'downloaded_by' => auth()->id(),
             ]);
 
-            return Storage::download($filePath, $fileName);
+            return Storage::disk('opcr')->download($filePath, $fileName);
 
         } catch (Exception $e) {
             Log::error('Failed to download OPCR file', [
