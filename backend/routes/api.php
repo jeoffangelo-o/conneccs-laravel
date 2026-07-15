@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChannelController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OPCRUploadController;
+use App\Http\Controllers\Api\AnnouncementController;
 
 // Test endpoint
 Route::get('/test', function () {
@@ -37,6 +38,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    
+    // Announcement routes
+    Route::get('/announcements', [AnnouncementController::class, 'index']);
+    Route::get('/announcements/{id}', [AnnouncementController::class, 'show']);
+    
+    // President-only announcement management
+    Route::middleware('role:president')->group(function () {
+        Route::post('/announcements', [AnnouncementController::class, 'store']);
+        Route::put('/announcements/{id}', [AnnouncementController::class, 'update']);
+        Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy']);
+        Route::post('/announcements/{id}/publish', [AnnouncementController::class, 'togglePublish']);
+        Route::post('/announcements/{id}/pin', [AnnouncementController::class, 'togglePin']);
+    });
     
     // OPCR routes
     Route::prefix('opcr')->group(function () {
