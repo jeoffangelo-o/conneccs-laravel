@@ -13,7 +13,16 @@ return new class extends Migration
     {
         Schema::create('announcements', function (Blueprint $table) {
             $table->id();
+            $table->string('title');
+            $table->text('content');
+            $table->enum('priority', ['low', 'normal', 'high', 'urgent'])->default('normal');
+            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
+            $table->timestamp('published_at')->nullable();
+            $table->boolean('is_pinned')->default(false);
             $table->timestamps();
+            
+            $table->index('published_at');
+            $table->index('is_pinned');
         });
     }
 
