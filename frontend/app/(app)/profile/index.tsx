@@ -1,288 +1,351 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { DrawerActions } from '@react-navigation/native';
-import { useNavigation } from 'expo-router';
-import { useTheme } from '../../../context/ThemeContext';
-import { useAuth } from '../../../context/AuthContext';
-import { StatusBar } from 'expo-status-bar';
-import { SvgIcon } from '../../../components/SvgIcon';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/utils/api';
 
 export default function ProfileScreen() {
-  const router = useRouter();
-  const navigation = useNavigation();
-  const { colors, isDark } = useTheme();
   const { user, logout } = useAuth();
-  const styles = createStyles(colors);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.replace('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            await logout();
+            setLoading(false);
+          },
+        },
+      ]
+    );
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-        return colors.red;
-      case 'DEAN':
-        return colors.accent;
-      case 'CHAIR':
-        return '#3b82f6';
-      case 'FACULTY':
-        return '#10b981';
-      case 'SECRETARY':
-        return colors.teal;
-      case 'COORDINATOR':
-        return colors.orange;
-      default:
-        return colors.text3;
-    }
+  const menuItems = [
+    {
+      icon: 'person-outline',
+      title: 'Edit Profile',
+      subtitle: 'Update your personal information',
+      onPress: () => router.push('/profile/edit'),
+    },
+    {
+      icon: 'lock-closed-outline',
+      title: 'Change Password',
+      subtitle: 'Update your password',
+      onPress: () => router.push('/profile/change-password'),
+    },
+    {
+      icon: 'notifications-outline',
+      title: 'Notification Settings',
+      subtitle: 'Manage your notifications',
+      onPress: () => router.push('/profile/notifications'),
+    },
+    {
+      icon: 'help-circle-outline',
+      title: 'Help & Support',
+      subtitle: 'Get help or contact support',
+      onPress: () => Alert.alert('Help', 'Contact support at support@cspc.edu.ph'),
+    },
+    {
+      icon: 'information-circle-outline',
+      title: 'About',
+      subtitle: 'App version and information',
+      onPress: () => Alert.alert('ConneCCS', 'Version 1.0.0\n\nCamarines Sur Polytechnic Colleges\nCollaboration & Communication System'),
+    },
+  ];
+
+  const getRoleColor = (role: string) => {
+    const colors: any = {
+      president: '#8B5CF6',
+      'vice-president': '#6366F1',
+      dean: '#3B82F6',
+      secretary: '#10B981',
+      faculty: '#F59E0B',
+    };
+    return colors[role?.toLowerCase()] || '#6B7280';
   };
 
-  const getUserInitials = () => {
-    if (!user?.name) return '?';
-    const parts = user.name.split(' ');
-    if (parts.length >= 2) {
-      return parts[0][0] + parts[1][0];
-    }
-    return user.name[0];
+  const getRoleLabel = (role: string) => {
+    const labels: any = {
+      FACULTY: 'Faculty',
+      SECRETARY: 'Secretary',
+      COORDINATOR: 'Coordinator',
+      DEAN: 'Dean',
+      CHAIR: 'Chair',
+      VPAA: 'Vice President for Academic Affairs',
+      ADMIN: 'Administrator',
+    };
+    return labels[role] || role;
   };
 
-  if (!user) return null;
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>Logging out...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      
-      {/* Topbar */}
-      <View style={styles.topbar}>
-        <View style={styles.topbarLeft}>
-          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
-            <SvgIcon name="menu" size={24} color={colors.text} />
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Profile Card */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatarContainer}>
+          {user?.profilePicture ? (
+            <Image source={{ uri: user.profilePicture }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarText}>
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.cameraButton}
+            onPress={() => router.push('/profile/edit-picture')}
+          >
+            <Ionicons name="camera" size={16} color="#FFFFFF" />
           </TouchableOpacity>
-          <View style={styles.topbarTitle}>
-            <Text style={styles.topbarTitleText}>Profile</Text>
-            <Text style={styles.topbarBreadcrumb}>Account Settings</Text>
-          </View>
+        </View>
+
+        <Text style={styles.userName}>{user?.name}</Text>
+        <Text style={styles.userEmail}>{user?.email}</Text>
+
+        <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user?.role || '') + '20' }]}>
+          <Text style={[styles.roleText, { color: getRoleColor(user?.role || '') }]}>
+            {getRoleLabel(user?.role || '')}
+          </Text>
         </View>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-              <Text style={styles.avatarText}>{getUserInitials()}</Text>
+      {/* Menu Items */}
+      <View style={styles.menuContainer}>
+        {menuItems.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={item.onPress}
+          >
+            <View style={styles.menuIconContainer}>
+              <Ionicons name={item.icon as any} size={24} color="#3B82F6" />
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user.name}</Text>
-              <View style={[styles.roleBadge, { backgroundColor: getRoleBadgeColor(user.role) + '20' }]}>
-                <Text style={[styles.roleBadgeText, { color: getRoleBadgeColor(user.role) }]}>
-                  {user.role}
-                </Text>
-              </View>
+            <View style={styles.menuContent}>
+              <Text style={styles.menuTitle}>{item.title}</Text>
+              <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
             </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <SvgIcon name="user" size={18} color={colors.text3} />
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{user.email}</Text>
-            </View>
-            
-            {user.firstName && (
-              <View style={styles.infoRow}>
-                <SvgIcon name="user" size={18} color={colors.text3} />
-                <Text style={styles.infoLabel}>First Name</Text>
-                <Text style={styles.infoValue}>{user.firstName}</Text>
-              </View>
-            )}
-            
-            {user.lastName && (
-              <View style={styles.infoRow}>
-                <SvgIcon name="user" size={18} color={colors.text3} />
-                <Text style={styles.infoLabel}>Last Name</Text>
-                <Text style={styles.infoValue}>{user.lastName}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actionsCard}>
-          <TouchableOpacity style={styles.actionItem}>
-            <SvgIcon name="user" size={20} color={colors.text2} />
-            <Text style={styles.actionText}>Account Settings</Text>
-            <SvgIcon name="chevronRight" size={18} color={colors.text3} />
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
-          
-          <View style={styles.actionDivider} />
-          
-          <TouchableOpacity style={styles.actionItem}>
-            <SvgIcon name="user" size={20} color={colors.text2} />
-            <Text style={styles.actionText}>Change Password</Text>
-            <SvgIcon name="chevronRight" size={18} color={colors.text3} />
-          </TouchableOpacity>
-          
-          <View style={styles.actionDivider} />
-          
-          <TouchableOpacity style={styles.actionItem} onPress={handleLogout}>
-            <SvgIcon name="logOut" size={20} color={colors.red} />
-            <Text style={[styles.actionText, { color: colors.red }]}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+        ))}
+      </View>
+
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+
+      {/* Footer */}
+      <Text style={styles.footer}>
+        © 2026 Camarines Sur Polytechnic Colleges
+      </Text>
+    </ScrollView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: '#F9FAFB',
   },
-  topbar: {
-    backgroundColor: colors.bg2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 48,
-  },
-  topbarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-  },
-  topbarTitle: {
-    flex: 1,
-  },
-  topbarTitleText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  topbarBreadcrumb: {
-    fontSize: 11,
-    color: colors.text3,
-    marginTop: 2,
-  },
-  content: {
-    padding: 16,
+  contentContainer: {
     paddingBottom: 32,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
   profileCard: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 16,
     padding: 24,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  avatarContainer: {
+    position: 'relative',
     marginBottom: 16,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-  },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 36,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  profileInfo: {
-    flex: 1,
+  cameraButton: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#3B82F6',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
+  userName: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
   },
   roleBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  roleBadgeText: {
-    fontSize: 12,
+  roleText: {
+    fontSize: 14,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 20,
-  },
-  infoSection: {
-    gap: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: colors.text3,
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'right',
-  },
-  actionsCard: {
-    backgroundColor: colors.bg2,
+  menuContainer: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  actionItem: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  menuContent: {
     flex: 1,
   },
-  actionDivider: {
-    height: 1,
-    backgroundColor: colors.border,
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginLeft: 8,
+  },
+  footer: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 24,
   },
 });
