@@ -25,6 +25,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/profile/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/profile/upload-picture', [AuthController::class, 'uploadProfilePicture']);
+    Route::delete('/profile/delete-picture', [AuthController::class, 'deleteProfilePicture']);
     
     // Channel routes
     Route::get('/channels', [ChannelController::class, 'index']);
