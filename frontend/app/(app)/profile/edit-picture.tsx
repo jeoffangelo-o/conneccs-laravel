@@ -9,13 +9,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { SvgIcon } from '@/components/SvgIcon';
 import api from '@/utils/api';
 
 export default function EditPictureScreen() {
   const { user, updateUser } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -158,7 +161,7 @@ export default function EditPictureScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Picture</Text>
         <View style={{ width: 40 }} />
@@ -171,7 +174,7 @@ export default function EditPictureScreen() {
             <Image source={{ uri: displayImage }} style={styles.image} />
           ) : (
             <View style={[styles.image, styles.imagePlaceholder]}>
-              <Ionicons name="person" size={80} color="#9CA3AF" />
+              <SvgIcon name="user" size={80} color={colors.text3} />
             </View>
           )}
         </View>
@@ -183,7 +186,7 @@ export default function EditPictureScreen() {
             onPress={pickImage}
             disabled={loading}
           >
-            <Ionicons name="images-outline" size={24} color="#3B82F6" />
+            <SvgIcon name="image" size={24} color={colors.accent} />
             <Text style={styles.actionButtonText}>Choose from Gallery</Text>
           </TouchableOpacity>
 
@@ -192,7 +195,7 @@ export default function EditPictureScreen() {
             onPress={takePhoto}
             disabled={loading}
           >
-            <Ionicons name="camera-outline" size={24} color="#3B82F6" />
+            <SvgIcon name="camera" size={24} color={colors.accent} />
             <Text style={styles.actionButtonText}>Take Photo</Text>
           </TouchableOpacity>
 
@@ -202,7 +205,7 @@ export default function EditPictureScreen() {
               onPress={handleDelete}
               disabled={loading}
             >
-              <Ionicons name="trash-outline" size={24} color="#EF4444" />
+              <SvgIcon name="trash" size={24} color={colors.red} />
               <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
                 Delete Picture
               </Text>
@@ -221,7 +224,7 @@ export default function EditPictureScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="cloud-upload-outline" size={20} color="#FFFFFF" />
+                <SvgIcon name="upload" size={20} color="#FFFFFF" />
                 <Text style={styles.uploadButtonText}>Upload Picture</Text>
               </>
             )}
@@ -232,19 +235,19 @@ export default function EditPictureScreen() {
         <View style={styles.guidelinesCard}>
           <Text style={styles.guidelinesTitle}>Guidelines:</Text>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
+            <SvgIcon name="checkCircle" size={16} color={colors.green} />
             <Text style={styles.guidelineText}>Use a clear, professional photo</Text>
           </View>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
+            <SvgIcon name="checkCircle" size={16} color={colors.green} />
             <Text style={styles.guidelineText}>JPG or PNG format</Text>
           </View>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
+            <SvgIcon name="checkCircle" size={16} color={colors.green} />
             <Text style={styles.guidelineText}>Maximum file size: 2MB</Text>
           </View>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
+            <SvgIcon name="checkCircle" size={16} color={colors.green} />
             <Text style={styles.guidelineText}>Square aspect ratio (1:1) recommended</Text>
           </View>
         </View>
@@ -253,10 +256,10 @@ export default function EditPictureScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -264,17 +267,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
@@ -292,15 +295,10 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderColor: colors.border2,
   },
   imagePlaceholder: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.bg3,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -310,67 +308,54 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
     marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   actionButtonText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#1F2937',
+    fontWeight: '600',
+    color: colors.text,
     marginLeft: 12,
   },
   deleteButton: {
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
-    elevation: 1,
+    borderColor: `${colors.red}40`,
   },
   deleteButtonText: {
-    color: '#EF4444',
+    color: colors.red,
   },
   uploadButton: {
     flexDirection: 'row',
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   uploadButtonDisabled: {
     opacity: 0.6,
   },
   uploadButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 8,
   },
   guidelinesCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
   },
   guidelinesTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 12,
   },
   guideline: {
@@ -380,7 +365,7 @@ const styles = StyleSheet.create({
   },
   guidelineText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text2,
     marginLeft: 8,
   },
 });

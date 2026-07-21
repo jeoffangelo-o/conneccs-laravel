@@ -9,9 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/context/ThemeContext';
+import { SvgIcon } from '@/components/SvgIcon';
 
 export default function NotificationSettingsScreen() {
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [settings, setSettings] = useState({
     pushNotifications: true,
     emailNotifications: true,
@@ -43,13 +46,13 @@ export default function NotificationSettingsScreen() {
           key: 'pushNotifications' as const,
           label: 'Push Notifications',
           description: 'Receive notifications on your device',
-          icon: 'notifications-outline',
+          icon: 'bell',
         },
         {
           key: 'emailNotifications' as const,
           label: 'Email Notifications',
           description: 'Receive notifications via email',
-          icon: 'mail-outline',
+          icon: 'mail',
         },
       ],
     },
@@ -60,25 +63,25 @@ export default function NotificationSettingsScreen() {
           key: 'announcementAlerts' as const,
           label: 'Announcements',
           description: 'Get notified about new announcements',
-          icon: 'megaphone-outline',
+          icon: 'megaphone',
         },
         {
           key: 'messageAlerts' as const,
           label: 'Messages',
           description: 'Get notified about new messages',
-          icon: 'chatbubble-outline',
+          icon: 'messageCircle',
         },
         {
           key: 'opcrAlerts' as const,
           label: 'OPCR Updates',
           description: 'Get notified about OPCR submissions',
-          icon: 'document-text-outline',
+          icon: 'fileText',
         },
         {
           key: 'weeklyDigest' as const,
           label: 'Weekly Digest',
           description: 'Receive weekly activity summary',
-          icon: 'calendar-outline',
+          icon: 'calendar',
         },
       ],
     },
@@ -89,13 +92,13 @@ export default function NotificationSettingsScreen() {
           key: 'soundEnabled' as const,
           label: 'Sound',
           description: 'Play sound for notifications',
-          icon: 'volume-high-outline',
+          icon: 'volume2',
         },
         {
           key: 'vibrationEnabled' as const,
           label: 'Vibration',
           description: 'Vibrate for notifications',
-          icon: 'phone-portrait-outline',
+          icon: 'smartphone',
         },
       ],
     },
@@ -106,7 +109,7 @@ export default function NotificationSettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <TouchableOpacity onPress={handleSave}>
@@ -117,7 +120,7 @@ export default function NotificationSettingsScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Info Card */}
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle" size={24} color="#3B82F6" />
+          <SvgIcon name="info" size={24} color={colors.accent} />
           <Text style={styles.infoText}>
             Manage how you receive notifications from ConneCCS. Changes are saved automatically.
           </Text>
@@ -137,7 +140,7 @@ export default function NotificationSettingsScreen() {
                   ]}
                 >
                   <View style={styles.settingIconContainer}>
-                    <Ionicons name={item.icon as any} size={24} color="#3B82F6" />
+                    <SvgIcon name={item.icon as any} size={24} color={colors.accent} />
                   </View>
                   <View style={styles.settingContent}>
                     <Text style={styles.settingLabel}>{item.label}</Text>
@@ -146,8 +149,8 @@ export default function NotificationSettingsScreen() {
                   <Switch
                     value={settings[item.key]}
                     onValueChange={() => handleToggle(item.key)}
-                    trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                    thumbColor={settings[item.key] ? '#3B82F6' : '#F3F4F6'}
+                    trackColor={{ false: colors.border2, true: `${colors.accent}80` }}
+                    thumbColor={settings[item.key] ? colors.accent : colors.text3}
                   />
                 </View>
               ))}
@@ -160,7 +163,7 @@ export default function NotificationSettingsScreen() {
           style={styles.testButton}
           onPress={() => Alert.alert('Test Notification', 'This is a test notification from ConneCCS')}
         >
-          <Ionicons name="notifications-outline" size={20} color="#3B82F6" />
+          <SvgIcon name="bell" size={20} color={colors.accent} />
           <Text style={styles.testButtonText}>Send Test Notification</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -168,10 +171,10 @@ export default function NotificationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -179,17 +182,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3B82F6',
+    color: colors.accent,
   },
   content: {
     flex: 1,
@@ -207,17 +210,17 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     flexDirection: 'row',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.bg3,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: colors.accent,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#1E40AF',
+    color: colors.text2,
     marginLeft: 12,
     lineHeight: 20,
   },
@@ -226,22 +229,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: '700',
+    color: colors.text3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
     paddingHorizontal: 4,
   },
   settingsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   settingItem: {
     flexDirection: 'row',
@@ -250,13 +250,13 @@ const styles = StyleSheet.create({
   },
   settingItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   settingIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.bg3,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -266,33 +266,28 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#1F2937',
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.text3,
   },
   testButton: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
   },
   testButtonText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#3B82F6',
+    fontWeight: '600',
+    color: colors.accent,
     marginLeft: 8,
   },
 });

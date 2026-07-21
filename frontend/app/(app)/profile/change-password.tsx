@@ -10,10 +10,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/context/ThemeContext';
+import { SvgIcon } from '@/components/SvgIcon';
 import api from '@/utils/api';
 
 export default function ChangePasswordScreen() {
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -77,7 +80,7 @@ export default function ChangePasswordScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Change Password</Text>
         <View style={{ width: 40 }} />
@@ -86,7 +89,7 @@ export default function ChangePasswordScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Info Card */}
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle" size={24} color="#3B82F6" />
+          <SvgIcon name="info" size={24} color={colors.accent} />
           <Text style={styles.infoText}>
             Choose a strong password that you haven't used before. Your password must be at least 8 characters long.
           </Text>
@@ -98,13 +101,13 @@ export default function ChangePasswordScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Current Password</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="lock" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.currentPassword}
                 onChangeText={(text) => setFormData({ ...formData, currentPassword: text })}
                 placeholder="Enter current password"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
                 secureTextEntry={!showCurrentPassword}
                 autoCapitalize="none"
               />
@@ -112,10 +115,10 @@ export default function ChangePasswordScreen() {
                 onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                 style={styles.eyeButton}
               >
-                <Ionicons
-                  name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                <SvgIcon
+                  name={showCurrentPassword ? 'eyeOff' : 'eye'}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.text3}
                 />
               </TouchableOpacity>
             </View>
@@ -125,13 +128,13 @@ export default function ChangePasswordScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>New Password</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="lock" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.newPassword}
                 onChangeText={(text) => setFormData({ ...formData, newPassword: text })}
                 placeholder="Enter new password"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
                 secureTextEntry={!showNewPassword}
                 autoCapitalize="none"
               />
@@ -139,10 +142,10 @@ export default function ChangePasswordScreen() {
                 onPress={() => setShowNewPassword(!showNewPassword)}
                 style={styles.eyeButton}
               >
-                <Ionicons
-                  name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                <SvgIcon
+                  name={showNewPassword ? 'eyeOff' : 'eye'}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.text3}
                 />
               </TouchableOpacity>
             </View>
@@ -155,13 +158,13 @@ export default function ChangePasswordScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirm New Password</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="lock" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.confirmPassword}
                 onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
                 placeholder="Confirm new password"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
               />
@@ -169,10 +172,10 @@ export default function ChangePasswordScreen() {
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 style={styles.eyeButton}
               >
-                <Ionicons
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                <SvgIcon
+                  name={showConfirmPassword ? 'eyeOff' : 'eye'}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.text3}
                 />
               </TouchableOpacity>
             </View>
@@ -192,7 +195,7 @@ export default function ChangePasswordScreen() {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              <SvgIcon name="checkCircle" size={20} color="#FFFFFF" />
               <Text style={styles.changeButtonText}>Change Password</Text>
             </>
           )}
@@ -202,26 +205,26 @@ export default function ChangePasswordScreen() {
         <View style={styles.requirementsCard}>
           <Text style={styles.requirementsTitle}>Password Requirements:</Text>
           <View style={styles.requirement}>
-            <Ionicons
-              name={formData.newPassword.length >= 8 ? "checkmark-circle" : "ellipse-outline"}
+            <SvgIcon
+              name={formData.newPassword.length >= 8 ? "checkCircle" : "circle"}
               size={16}
-              color={formData.newPassword.length >= 8 ? "#10B981" : "#9CA3AF"}
+              color={formData.newPassword.length >= 8 ? colors.green : colors.text3}
             />
             <Text style={styles.requirementText}>At least 8 characters long</Text>
           </View>
           <View style={styles.requirement}>
-            <Ionicons
-              name={formData.newPassword && formData.newPassword !== formData.currentPassword ? "checkmark-circle" : "ellipse-outline"}
+            <SvgIcon
+              name={formData.newPassword && formData.newPassword !== formData.currentPassword ? "checkCircle" : "circle"}
               size={16}
-              color={formData.newPassword && formData.newPassword !== formData.currentPassword ? "#10B981" : "#9CA3AF"}
+              color={formData.newPassword && formData.newPassword !== formData.currentPassword ? colors.green : colors.text3}
             />
             <Text style={styles.requirementText}>Different from current password</Text>
           </View>
           <View style={styles.requirement}>
-            <Ionicons
-              name={formData.newPassword && formData.confirmPassword && formData.newPassword === formData.confirmPassword ? "checkmark-circle" : "ellipse-outline"}
+            <SvgIcon
+              name={formData.newPassword && formData.confirmPassword && formData.newPassword === formData.confirmPassword ? "checkCircle" : "circle"}
               size={16}
-              color={formData.newPassword && formData.confirmPassword && formData.newPassword === formData.confirmPassword ? "#10B981" : "#9CA3AF"}
+              color={formData.newPassword && formData.confirmPassword && formData.newPassword === formData.confirmPassword ? colors.green : colors.text3}
             />
             <Text style={styles.requirementText}>Passwords match</Text>
           </View>
@@ -231,10 +234,10 @@ export default function ChangePasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -242,17 +245,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
@@ -265,47 +268,44 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     flexDirection: 'row',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.bg3,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: colors.accent,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#1E40AF',
+    color: colors.text2,
     marginLeft: 12,
     lineHeight: 20,
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   inputGroup: {
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '600',
+    color: colors.text2,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg3,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     paddingHorizontal: 12,
   },
   inputIcon: {
@@ -315,53 +315,45 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     fontSize: 16,
-    color: '#1F2937',
+    color: colors.text,
   },
   eyeButton: {
     padding: 8,
   },
   errorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: colors.red,
     marginTop: 4,
   },
   changeButton: {
     flexDirection: 'row',
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   changeButtonDisabled: {
     opacity: 0.6,
   },
   changeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 8,
   },
   requirementsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
   },
   requirementsTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 12,
   },
   requirement: {
@@ -371,7 +363,7 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text2,
     marginLeft: 8,
   },
 });

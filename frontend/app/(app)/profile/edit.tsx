@@ -10,12 +10,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { SvgIcon } from '@/components/SvgIcon';
 import api from '@/utils/api';
 
 export default function EditProfileScreen() {
   const { user, updateUser } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -67,7 +70,7 @@ export default function EditProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <TouchableOpacity
@@ -76,7 +79,7 @@ export default function EditProfileScreen() {
           style={styles.saveButton}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#3B82F6" />
+            <ActivityIndicator size="small" color={colors.accent} />
           ) : (
             <Text style={styles.saveButtonText}>Save</Text>
           )}
@@ -91,13 +94,13 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>First Name *</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="user" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.firstName}
                 onChangeText={(text) => setFormData({ ...formData, firstName: text })}
                 placeholder="Enter first name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
               />
             </View>
           </View>
@@ -105,13 +108,13 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Last Name *</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="user" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.lastName}
                 onChangeText={(text) => setFormData({ ...formData, lastName: text })}
                 placeholder="Enter last name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
               />
             </View>
           </View>
@@ -119,13 +122,13 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email *</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="mail" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.email}
                 onChangeText={(text) => setFormData({ ...formData, email: text })}
                 placeholder="Enter email"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -135,13 +138,13 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Phone Number</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="call-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="phone" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.phone}
                 onChangeText={(text) => setFormData({ ...formData, phone: text })}
                 placeholder="Enter phone number"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
                 keyboardType="phone-pad"
               />
             </View>
@@ -155,13 +158,13 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Department</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="business-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="grid" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.department}
                 onChangeText={(text) => setFormData({ ...formData, department: text })}
                 placeholder="Enter department"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
               />
             </View>
           </View>
@@ -169,13 +172,13 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Position</Text>
             <View style={styles.inputContainer}>
-              <Ionicons name="briefcase-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <SvgIcon name="briefcase" size={20} color={colors.text3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={formData.position}
                 onChangeText={(text) => setFormData({ ...formData, position: text })}
                 placeholder="Enter position"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text3}
               />
             </View>
           </View>
@@ -187,10 +190,10 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -198,17 +201,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
@@ -220,7 +223,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3B82F6',
+    color: colors.accent,
   },
   content: {
     flex: 1,
@@ -229,20 +232,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 16,
   },
   inputGroup: {
@@ -250,17 +250,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '600',
+    color: colors.text2,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg3,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     paddingHorizontal: 12,
   },
   inputIcon: {
@@ -270,11 +270,11 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     fontSize: 16,
-    color: '#1F2937',
+    color: colors.text,
   },
   note: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.text3,
     fontStyle: 'italic',
     textAlign: 'center',
   },

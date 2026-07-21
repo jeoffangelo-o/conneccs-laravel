@@ -10,12 +10,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { SvgIcon } from '@/components/SvgIcon';
 import api from '@/utils/api';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(false);
 
   const handleLogout = () => {
@@ -39,31 +42,31 @@ export default function ProfileScreen() {
 
   const menuItems = [
     {
-      icon: 'person-outline',
+      icon: 'user',
       title: 'Edit Profile',
       subtitle: 'Update your personal information',
       onPress: () => router.push('/profile/edit'),
     },
     {
-      icon: 'lock-closed-outline',
+      icon: 'lock',
       title: 'Change Password',
       subtitle: 'Update your password',
       onPress: () => router.push('/profile/change-password'),
     },
     {
-      icon: 'notifications-outline',
+      icon: 'bell',
       title: 'Notification Settings',
       subtitle: 'Manage your notifications',
       onPress: () => router.push('/profile/notifications'),
     },
     {
-      icon: 'help-circle-outline',
+      icon: 'helpCircle',
       title: 'Help & Support',
       subtitle: 'Get help or contact support',
       onPress: () => Alert.alert('Help', 'Contact support at support@cspc.edu.ph'),
     },
     {
-      icon: 'information-circle-outline',
+      icon: 'info',
       title: 'About',
       subtitle: 'App version and information',
       onPress: () => Alert.alert('ConneCCS', 'Version 1.0.0\n\nCamarines Sur Polytechnic Colleges\nCollaboration & Communication System'),
@@ -71,14 +74,7 @@ export default function ProfileScreen() {
   ];
 
   const getRoleColor = (role: string) => {
-    const colors: any = {
-      president: '#8B5CF6',
-      'vice-president': '#6366F1',
-      dean: '#3B82F6',
-      secretary: '#10B981',
-      faculty: '#F59E0B',
-    };
-    return colors[role?.toLowerCase()] || '#6B7280';
+    return colors.accent;
   };
 
   const getRoleLabel = (role: string) => {
@@ -97,7 +93,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={colors.accent} />
         <Text style={styles.loadingText}>Logging out...</Text>
       </View>
     );
@@ -108,7 +104,7 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={{ width: 40 }} />
@@ -130,7 +126,7 @@ export default function ProfileScreen() {
             style={styles.cameraButton}
             onPress={() => router.push('/profile/edit-picture')}
           >
-            <Ionicons name="camera" size={16} color="#FFFFFF" />
+            <SvgIcon name="camera" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
@@ -153,20 +149,20 @@ export default function ProfileScreen() {
             onPress={item.onPress}
           >
             <View style={styles.menuIconContainer}>
-              <Ionicons name={item.icon as any} size={24} color="#3B82F6" />
+              <SvgIcon name={item.icon as any} size={24} color={colors.accent} />
             </View>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>{item.title}</Text>
               <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <SvgIcon name="chevronRight" size={20} color={colors.text3} />
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+        <SvgIcon name="logOut" size={24} color={colors.red} />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 
@@ -178,10 +174,10 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   contentContainer: {
     paddingBottom: 32,
@@ -190,12 +186,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text3,
   },
   header: {
     flexDirection: 'row',
@@ -203,29 +199,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
   },
   profileCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     margin: 16,
-    borderRadius: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 24,
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   avatarContainer: {
     position: 'relative',
@@ -237,71 +230,70 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   avatarPlaceholder: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 36,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   cameraButton: {
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.accent,
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.bg2,
   },
   userName: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text3,
     marginBottom: 12,
   },
   roleBadge: {
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
+    backgroundColor: `${colors.accent}20`,
   },
   roleText: {
     fontSize: 14,
     fontWeight: '600',
+    color: colors.accent,
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     marginHorizontal: 16,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   menuIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.bg3,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -311,40 +303,35 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#1F2937',
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 2,
   },
   menuSubtitle: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.text3,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg2,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
+    borderColor: colors.border,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#EF4444',
+    color: colors.red,
     marginLeft: 8,
   },
   footer: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.text3,
     textAlign: 'center',
     marginTop: 24,
   },
