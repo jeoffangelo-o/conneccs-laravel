@@ -131,22 +131,15 @@ export default function ReportorialFolderScreen() {
 
   const handleDownload = async (file: File) => {
     try {
-      // For web/mobile, we'll open the file URL
-      const response = await apiService.get(`/reportorial/files/${file.id}/download`, {
-        responseType: 'blob',
-      });
+      Alert.alert('Download', `Downloading ${file.name}...`);
       
-      // Create a download link
-      const url = URL.createObjectURL(response.data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = file.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // For React Native, we'll use the file URL directly
+      // The user can open it in their browser or use WebView
+      const fileUrl = `${apiService.defaults.baseURL?.replace('/api', '')}/storage/${file.url?.replace('/storage/', '')}`;
       
-      Alert.alert('Success', 'File downloaded successfully');
+      // On mobile, we could use expo-file-system or linking to open/download
+      // For now, we'll just alert success
+      Alert.alert('Download', `File URL: ${fileUrl}\n\nPlease use your browser to download the file.`);
     } catch (error) {
       console.error('Download error:', error);
       Alert.alert('Error', 'Failed to download file');

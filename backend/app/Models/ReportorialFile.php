@@ -65,7 +65,7 @@ class ReportorialFile extends Model
      */
     public function getFileUrlAttribute(): string
     {
-        return Storage::url($this->file_path);
+        return Storage::disk('public')->url($this->file_path);
     }
 
     /**
@@ -76,8 +76,8 @@ class ReportorialFile extends Model
         parent::boot();
 
         static::deleting(function ($file) {
-            if (Storage::exists($file->file_path)) {
-                Storage::delete($file->file_path);
+            if (Storage::disk('public')->exists($file->file_path)) {
+                Storage::disk('public')->delete($file->file_path);
             }
         });
     }

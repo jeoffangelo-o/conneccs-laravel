@@ -169,7 +169,9 @@ export default function ReportorialRequirementsScreen() {
           <View style={styles.infoCard}>
             <SvgIcon name="fileText" size={24} color={colors.blue} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoValue}>0</Text>
+              <Text style={styles.infoValue}>
+                {folders.reduce((sum, folder) => sum + (folder.filesCount || 0), 0)}
+              </Text>
               <Text style={styles.infoLabel}>Total Files</Text>
             </View>
           </View>
@@ -211,7 +213,9 @@ export default function ReportorialRequirementsScreen() {
                   </Text>
                   <View style={styles.folderMeta}>
                     <SvgIcon name="fileText" size={12} color={colors.text3} />
-                    <Text style={styles.folderMetaText}>0 files</Text>
+                    <Text style={styles.folderMetaText}>
+                      {folder.filesCount || 0} {folder.filesCount === 1 ? 'file' : 'files'}
+                    </Text>
                   </View>
                 </View>
                 {viewMode === 'list' && (

@@ -152,11 +152,11 @@ class ReportorialController extends Controller
     {
         $file = ReportorialFile::findOrFail($fileId);
 
-        if (!Storage::exists($file->file_path)) {
+        if (!Storage::disk('public')->exists($file->file_path)) {
             abort(404, 'File not found in storage');
         }
 
-        return Storage::download($file->file_path, $file->original_name);
+        return Storage::disk('public')->download($file->file_path, $file->original_name);
     }
 
     /**
