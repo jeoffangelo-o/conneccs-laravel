@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('reportorial_files', function (Blueprint $table) {
@@ -16,7 +19,7 @@ return new class extends Migration
             $table->string('original_name');
             $table->string('file_path');
             $table->string('file_type');
-            $table->integer('file_size'); // in bytes
+            $table->bigInteger('file_size'); // in bytes
             $table->string('mime_type');
             $table->text('description')->nullable();
             $table->timestamps();
@@ -26,6 +29,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('reportorial_files');

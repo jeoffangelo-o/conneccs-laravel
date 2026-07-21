@@ -94,16 +94,31 @@ export default function ReportorialFolderScreen() {
       if (result.type === 'success') {
         setUploading(true);
         
-        // TODO: Upload to server
-        // const formData = new FormData();
-        // formData.append('file', result);
-        // await apiService.post(`/reportorial/folders/${folderId}/upload`, formData);
-        
-        Alert.alert('Success', 'File uploaded successfully!');
-        await loadFiles();
+        const formData = new FormData();
+        formData.append('file', {
+          uri: result.uri,
+          type: result.mimeType || 'application/octet-stream',
+          name: result.name,
+        } as any);
+
+        const response = await apiService.post(
+          `/reportorial/folders/${folderId}/upload`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+
+        if (response.data.success) {
+          Alert.alert('Success', 'File uploaded successfully!');
+          await loadFiles();
+        }
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to upload file');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to upload file');
     } finally {
       setUploading(false);
     }
@@ -114,9 +129,28 @@ export default function ReportorialFolderScreen() {
     setShowFileModal(true);
   };
 
-  const handleDownload = (file: File) => {
-    Alert.alert('Download', `Downloading ${file.name}...`);
-    // TODO: Implement download
+  const handleDownload = async (file: File) => {
+    try {
+      // For web/mobile, we'll open the file URL
+      const response = await apiService.get(`/reportorial/files/${file.id}/download`, {
+        responseType: 'blob',
+      });
+      
+      // Create a download link
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      Alert.alert('Success', 'File downloaded successfully');
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert('Error', 'Failed to download file');
+    }
   };
 
   const handleDelete = (file: File) => {
@@ -129,9 +163,17 @@ export default function ReportorialFolderScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // TODO: Delete from server
-            Alert.alert('Success', 'File deleted successfully');
-            await loadFiles();
+            try {
+              const response = await apiService.delete(`/reportorial/files/${file.id}`);
+              
+              if (response.data.success) {
+                Alert.alert('Success', 'File deleted successfully');
+                await loadFiles();
+              }
+            } catch (error: any) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', error.response?.data?.message || 'Failed to delete file');
+            }
           },
         },
       ]
