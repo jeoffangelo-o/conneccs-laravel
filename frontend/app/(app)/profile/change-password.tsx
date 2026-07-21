@@ -56,7 +56,7 @@ export default function ChangePasswordScreen() {
         Alert.alert(
           'Success',
           'Password changed successfully. All other sessions have been logged out.',
-          [{ text: 'OK', onPress: () => router.back() }]
+          [{ text: 'OK', onPress: () => router.push('/profile') }]
         );
         setFormData({
           currentPassword: '',
@@ -79,7 +79,7 @@ export default function ChangePasswordScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/profile')} style={styles.backButton}>
           <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Change Password</Text>

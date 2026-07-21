@@ -51,7 +51,7 @@ export default function EditProfileScreen() {
         }
         
         Alert.alert('Success', 'Profile updated successfully', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.push('/profile') }
         ]);
       }
     } catch (error: any) {
@@ -69,7 +69,7 @@ export default function EditProfileScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/profile')} style={styles.backButton}>
           <SvgIcon name="arrowLeft" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
