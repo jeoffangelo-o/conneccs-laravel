@@ -8,59 +8,78 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { DrawerActions } from '@react-navigation/native';
-import { useNavigation } from 'expo-router';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import { SvgIcon } from '../../../components/SvgIcon';
+import * as DocumentPicker from 'expo-document-picker';
 import { apiService } from '../../../services/api';
+
+interface File {
+  id: number;
+  name: string;
+  type: string;
+  size: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  url?: string;
+}
 
 export default function ReportorialFolderScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const params = useLocalSearchParams();
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [folder, setFolder] = useState<any>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showFileModal, setShowFileModal] = useState(false);
 
-  const folderId = params.id;
+  const folderName = (params.folderName as string) || 'Folder';
+  const folderId = params.folderId;
 
   useEffect(() => {
-    if (folderId) {
-      loadFolderData();
-    }
+    loadFiles();
   }, [folderId]);
 
-  const loadFolderData = async () => {
+  const loadFiles = async () => {
     try {
       setLoading(true);
-      const response = await apiService.get(`/reportorial/folders/${folderId}`);
-      setFolder(response.data);
+      // TODO: Replace with actual API call
+      // const response = await apiService.get(`/reportorial/folders/${folderId}/files`);
+      // setFiles(response.data);
+      
+      // Mock data for now
+      setFiles([
+        {
+          id: 1,
+          name: 'Sample_Document.pdf',
+          type: 'pdf',
+          size: '2.5 MB',
+          uploadedBy: 'John Doe',
+          uploadedAt: '2026-07-15T10:30:00',
+        },
+        {
+          id: 2,
+          name: 'Report_2026.docx',
+          type: 'docx',
+          size: '1.2 MB',
+          uploadedBy: 'Jane Smith',
+          uploadedAt: '2026-07-14T14:20:00',
+        },
+      ]);
     } catch (error) {
-      console.error('Failed to load folder:', error);
-      // Mock data for development
-      setFolder({
-        id: folderId,
-        requirement: 'Class Observation Reports',
-        deadline: 'May 30, 2026',
-        template: 'Observation Form 2026',
-        copies: 2,
-        staff: 'Dr. Smith',
-        submittedCount: 12,
-        totalCount: 18,
-        submissions: [
-          { id: 1, facultyName: 'Dr. John Benosa', submittedAt: '2026-05-15', qualityRating: 5, timelinessRating: 5 },
-          { id: 2, facultyName: 'Prof. Maria Colle', submittedAt: '2026-05-20', qualityRating: 4, timelinessRating: 4 },
-          { id: 3, facultyName: 'Prof. Mark Omorog', submittedAt: '2026-05-25', qualityRating: 5, timelinessRating: 3 },
-        ],
-      });
+      console.error('Failed to load files:', error);
     } finally {
       setLoading(false);
     }
@@ -68,84 +87,86 @@ export default function ReportorialFolderScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadFolderData();
+    await loadFiles();
     setRefreshing(false);
   };
 
-  const handleUploadSubmission = () => {
-    Alert.alert('Upload', 'File upload functionality will be implemented');
+  const handleUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.type === 'success') {
+        setUploading(true);
+        
+        // TODO: Upload to server
+        // const formData = new FormData();
+        // formData.append('file', result);
+        // await apiService.post(`/reportorial/folders/${folderId}/upload`, formData);
+        
+        Alert.alert('Success', 'File uploaded successfully!');
+        await loadFiles();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleSendReminder = () => {
-    const pendingCount = folder.totalCount - folder.submittedCount;
+  const handleFilePress = (file: File) => {
+    setSelectedFile(file);
+    setShowFileModal(true);
+  };
+
+  const handleDownload = (file: File) => {
+    Alert.alert('Download', `Downloading ${file.name}...`);
+    // TODO: Implement download
+  };
+
+  const handleDelete = (file: File) => {
     Alert.alert(
-      'Send Reminder',
-      `Send reminder to ${pendingCount} faculty members who haven't submitted?`,
+      'Delete File',
+      `Are you sure you want to delete ${file.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Send', onPress: () => Alert.alert('Success', 'Reminders sent!') },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            // TODO: Delete from server
+            Alert.alert('Success', 'File deleted successfully');
+            await loadFiles();
+          },
+        },
       ]
     );
   };
 
-  const handleGenerateReport = () => {
-    Alert.alert('Generate Report', 'Report generation functionality will be implemented');
+  const getFileIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'pdf':
+        return { name: 'fileText', color: colors.red };
+      case 'doc':
+      case 'docx':
+        return { name: 'fileText', color: colors.blue };
+      case 'xls':
+      case 'xlsx':
+        return { name: 'barChart', color: colors.green };
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return { name: 'image', color: colors.orange };
+      default:
+        return { name: 'file', color: colors.text3 };
+    }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-        <View style={styles.topbar}>
-          <View style={styles.topbarLeft}>
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              style={{ padding: 10 }}
-            >
-              <SvgIcon name="arrowBack" size={24} color={colors.text} style={{}} />
-            </TouchableOpacity>
-            <View style={styles.topbarTitle}>
-              <Text style={styles.topbarTitleText}>Reportorial Folder</Text>
-              <Text style={styles.topbarBreadcrumb}>Loading...</Text>
-            </View>
-          </View>
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-      </View>
-    );
-  }
-
-  if (!folder) {
-    return (
-      <View style={styles.container}>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-        <View style={styles.topbar}>
-          <View style={styles.topbarLeft}>
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              style={{ padding: 10 }}
-            >
-              <SvgIcon name="arrowBack" size={24} color={colors.text} style={{}} />
-            </TouchableOpacity>
-            <View style={styles.topbarTitle}>
-              <Text style={styles.topbarTitleText}>Reportorial Folder</Text>
-              <Text style={styles.topbarBreadcrumb}>Not Found</Text>
-            </View>
-          </View>
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <SvgIcon name="folder" size={64} color={colors.text3} style={{}} />
-          <Text style={styles.emptyText}>Folder not found</Text>
-        </View>
-      </View>
-    );
-  }
-
-  const submissionRate = Math.round((folder.submittedCount / folder.totalCount) * 100);
-  const pendingCount = folder.totalCount - folder.submittedCount;
-  const isSecretary = user?.role === 'SECRETARY';
+  const filteredFiles = files.filter(file =>
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <View style={styles.container}>
@@ -154,144 +175,233 @@ export default function ReportorialFolderScreen() {
       {/* Topbar */}
       <View style={styles.topbar}>
         <View style={styles.topbarLeft}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={{ padding: 10 }}
-          >
-            <SvgIcon name="arrowBack" size={24} color={colors.text} style={{}} />
+          <TouchableOpacity onPress={() => router.back()}>
+            <SvgIcon name="arrowLeft" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.topbarTitle}>
-            <Text style={styles.topbarTitleText}>{folder.requirement}</Text>
-            <Text style={styles.topbarBreadcrumb}>Reportorial Folder</Text>
+            <Text style={styles.topbarTitleText}>{folderName}</Text>
+            <Text style={styles.topbarBreadcrumb}>Reportorial Requirements • {folderName}</Text>
           </View>
+        </View>
+        <View style={styles.topbarRight}>
+          <TouchableOpacity 
+            style={styles.topbarIconBtn}
+            onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          >
+            <SvgIcon name={viewMode === 'grid' ? 'list' : 'grid'} size={22} color={colors.text2} />
+          </TouchableOpacity>
         </View>
       </View>
 
+      {/* Search and Upload Bar */}
+      <View style={styles.actionBar}>
+        <View style={styles.searchContainer}>
+          <SvgIcon name="search" size={20} color={colors.text3} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search files..."
+            placeholderTextColor={colors.text3}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <SvgIcon name="x" size={20} color={colors.text3} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity 
+          style={styles.uploadButton}
+          onPress={handleUpload}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <SvgIcon name="upload" size={18} color="#fff" />
+              <Text style={styles.uploadButtonText}>Upload</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.bg }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />}
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+        }
       >
-        {/* Summary Card */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Text style={styles.summaryTitle}>Submission Summary</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{submissionRate}% Complete</Text>
+        {/* File Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <SvgIcon name="fileText" size={20} color={colors.accent} />
+            <View style={styles.statInfo}>
+              <Text style={styles.statValue}>{files.length}</Text>
+              <Text style={styles.statLabel}>Total Files</Text>
             </View>
           </View>
-          
-          <View style={styles.summaryStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{folder.submittedCount}</Text>
-              <Text style={styles.statLabel}>Submitted</Text>
+          <View style={styles.statCard}>
+            <SvgIcon name="users" size={20} color={colors.blue} />
+            <View style={styles.statInfo}>
+              <Text style={styles.statValue}>{new Set(files.map(f => f.uploadedBy)).size}</Text>
+              <Text style={styles.statLabel}>Contributors</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.orange }]}>{pendingCount}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{folder.totalCount}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-          </View>
-
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${submissionRate}%` }]} />
           </View>
         </View>
 
-        {/* Details Card */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.cardTitle}>Requirement Details</Text>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Template:</Text>
-            <Text style={styles.detailValue}>{folder.template}</Text>
+        {/* Files List/Grid */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Text style={styles.loadingText}>Loading files...</Text>
           </View>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Copies:</Text>
-            <Text style={styles.detailValue}>{folder.copies}</Text>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Deadline:</Text>
-            <Text style={[styles.detailValue, { color: colors.orange, fontWeight: '600' }]}>
-              {folder.deadline}
+        ) : filteredFiles.length === 0 ? (
+          <View style={styles.emptyState}>
+            <SvgIcon name="folder" size={64} color={colors.text3} />
+            <Text style={styles.emptyTitle}>No files yet</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'No files match your search' : 'Upload files to get started'}
             </Text>
+            {!searchQuery && (
+              <TouchableOpacity style={styles.emptyButton} onPress={handleUpload}>
+                <SvgIcon name="upload" size={18} color="#fff" />
+                <Text style={styles.emptyButtonText}>Upload File</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Assigned to:</Text>
-            <Text style={styles.detailValue}>{folder.staff}</Text>
-          </View>
-        </View>
-
-        {/* Actions (Secretary Only) */}
-        {isSecretary && (
-          <View style={styles.actionsCard}>
-            <Text style={styles.cardTitle}>Actions</Text>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handleSendReminder}>
-              <SvgIcon name="bell" size={18} color="#fff" style={{}} />
-              <Text style={styles.actionButtonText}>Send Reminder ({pendingCount})</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handleGenerateReport}>
-              <SvgIcon name="document" size={18} color="#fff" style={{}} />
-              <Text style={styles.actionButtonText}>Generate Report</Text>
-            </TouchableOpacity>
+        ) : (
+          <View style={viewMode === 'grid' ? styles.filesGrid : styles.filesList}>
+            {filteredFiles.map((file) => {
+              const fileIcon = getFileIcon(file.type);
+              return (
+                <TouchableOpacity
+                  key={file.id}
+                  style={viewMode === 'grid' ? styles.fileCardGrid : styles.fileCardList}
+                  onPress={() => handleFilePress(file)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    styles.fileIconContainer,
+                    viewMode === 'list' && styles.fileIconSmall,
+                    { backgroundColor: `${fileIcon.color}20` }
+                  ]}>
+                    <SvgIcon 
+                      name={fileIcon.name as any} 
+                      size={viewMode === 'grid' ? 32 : 24} 
+                      color={fileIcon.color} 
+                    />
+                  </View>
+                  <View style={styles.fileInfo}>
+                    <Text 
+                      style={viewMode === 'grid' ? styles.fileName : styles.fileNameList}
+                      numberOfLines={viewMode === 'grid' ? 2 : 1}
+                    >
+                      {file.name}
+                    </Text>
+                    <View style={styles.fileMeta}>
+                      <Text style={styles.fileMetaText}>{file.size}</Text>
+                      {viewMode === 'list' && (
+                        <>
+                          <Text style={styles.fileMetaDot}>•</Text>
+                          <Text style={styles.fileMetaText}>{file.uploadedBy}</Text>
+                          <Text style={styles.fileMetaDot}>•</Text>
+                          <Text style={styles.fileMetaText}>
+                            {new Date(file.uploadedAt).toLocaleDateString()}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  {viewMode === 'list' && (
+                    <TouchableOpacity 
+                      style={styles.moreButton}
+                      onPress={() => handleFilePress(file)}
+                    >
+                      <SvgIcon name="moreVertical" size={20} color={colors.text3} />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
-
-        {/* Faculty View - Upload Section */}
-        {!isSecretary && (
-          <View style={styles.uploadCard}>
-            <Text style={styles.cardTitle}>My Submission</Text>
-            <TouchableOpacity style={styles.uploadButton} onPress={handleUploadSubmission}>
-              <SvgIcon name="upload" size={18} color="#fff" style={{}} />
-              <Text style={styles.uploadButtonText}>Upload Submission</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Submissions List */}
-        <View style={styles.submissionsCard}>
-          <Text style={styles.cardTitle}>Faculty Submissions ({folder.submittedCount}/{folder.totalCount})</Text>
-          
-          {folder.submissions.map((submission: any) => (
-            <View key={submission.id} style={styles.submissionCard}>
-              <View style={styles.submissionHeader}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{submission.facultyName.charAt(0)}</Text>
-                </View>
-                <View style={styles.submissionInfo}>
-                  <Text style={styles.facultyName}>{submission.facultyName}</Text>
-                  <Text style={styles.submissionDate}>
-                    Submitted: {new Date(submission.submittedAt).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-              
-              {submission.qualityRating && (
-                <View style={styles.ratingSection}>
-                  <View style={styles.ratingItem}>
-                    <Text style={styles.ratingLabel}>Quality:</Text>
-                    <Text style={styles.ratingValue}>{submission.qualityRating}/5</Text>
-                  </View>
-                  <View style={styles.ratingItem}>
-                    <Text style={styles.ratingLabel}>Timeliness:</Text>
-                    <Text style={styles.ratingValue}>{submission.timelinessRating}/5</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
       </ScrollView>
+
+      {/* File Detail Modal */}
+      <Modal
+        visible={showFileModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFileModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>File Details</Text>
+              <TouchableOpacity onPress={() => setShowFileModal(false)}>
+                <SvgIcon name="x" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedFile && (
+              <>
+                <View style={styles.modalBody}>
+                  <View style={styles.modalFileIcon}>
+                    <SvgIcon 
+                      name={getFileIcon(selectedFile.type).name as any} 
+                      size={48} 
+                      color={getFileIcon(selectedFile.type).color} 
+                    />
+                  </View>
+                  <Text style={styles.modalFileName}>{selectedFile.name}</Text>
+                  
+                  <View style={styles.modalDetail}>
+                    <Text style={styles.modalDetailLabel}>Size:</Text>
+                    <Text style={styles.modalDetailValue}>{selectedFile.size}</Text>
+                  </View>
+                  <View style={styles.modalDetail}>
+                    <Text style={styles.modalDetailLabel}>Uploaded by:</Text>
+                    <Text style={styles.modalDetailValue}>{selectedFile.uploadedBy}</Text>
+                  </View>
+                  <View style={styles.modalDetail}>
+                    <Text style={styles.modalDetailLabel}>Date:</Text>
+                    <Text style={styles.modalDetailValue}>
+                      {new Date(selectedFile.uploadedAt).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity 
+                    style={styles.modalButton}
+                    onPress={() => {
+                      handleDownload(selectedFile);
+                      setShowFileModal(false);
+                    }}
+                  >
+                    <SvgIcon name="download" size={18} color={colors.accent} />
+                    <Text style={[styles.modalButtonText, { color: colors.accent }]}>Download</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.modalButtonDanger]}
+                    onPress={() => {
+                      setShowFileModal(false);
+                      handleDelete(selectedFile);
+                    }}
+                  >
+                    <SvgIcon name="trash" size={18} color={colors.red} />
+                    <Text style={[styles.modalButtonText, { color: colors.red }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -305,8 +415,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.bg2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -315,7 +425,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   topbarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
     flex: 1,
   },
   topbarTitle: {
@@ -331,215 +441,287 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text3,
     marginTop: 2,
   },
-  summaryCard: {
+  topbarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  topbarIconBtn: {
+    position: 'relative',
+  },
+  actionBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    gap: 12,
     backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  summaryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  badge: {
-    backgroundColor: `${colors.accent}20`,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 99,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-  summaryStats: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  statItem: {
+  searchContainer: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.text3,
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-  },
-  progressBar: {
-    height: 8,
     backgroundColor: colors.bg3,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.accent,
-  },
-  detailsCard: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  detailLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text3,
-    width: 100,
-  },
-  detailValue: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.text,
-  },
-  actionsCard: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
-    paddingVertical: 14,
     borderRadius: 8,
-    marginBottom: 12,
+    paddingHorizontal: 12,
+    gap: 8,
   },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  uploadCard: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 14,
+    color: colors.text,
   },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
     backgroundColor: colors.accent,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
+    gap: 8,
   },
   uploadButtonText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  submissionsCard: {
-    backgroundColor: colors.bg2,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  submissionCard: {
-    backgroundColor: colors.bg3,
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  submissionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  submissionInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  facultyName: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 24,
+    paddingBottom: 32,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  statInfo: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.text,
   },
-  submissionDate: {
-    fontSize: 12,
+  statLabel: {
+    fontSize: 11,
     color: colors.text3,
     marginTop: 2,
   },
-  ratingSection: {
+  loadingContainer: {
+    padding: 48,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.text3,
+  },
+  emptyState: {
+    padding: 48,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.text3,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  emptyButton: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  filesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
-    paddingTop: 12,
+  },
+  filesList: {
+    gap: 12,
+  },
+  fileCardGrid: {
+    width: '48%',
+    minWidth: 150,
+    backgroundColor: colors.bg2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  fileCardList: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  fileIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fileIconSmall: {
+    width: 48,
+    height: 48,
+  },
+  fileInfo: {
+    flex: 1,
+    gap: 6,
+  },
+  fileName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    lineHeight: 18,
+  },
+  fileNameList: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  fileMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  fileMetaText: {
+    fontSize: 11,
+    color: colors.text3,
+  },
+  fileMetaDot: {
+    fontSize: 11,
+    color: colors.text3,
+  },
+  moreButton: {
+    padding: 4,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  modalBody: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalFileIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: colors.bg2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalFileName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalDetail: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalDetailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text3,
+  },
+  modalDetailValue: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: 24,
+    gap: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  ratingItem: {
+  modalButton: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 14,
+    borderRadius: 8,
+    gap: 8,
   },
-  ratingLabel: {
-    fontSize: 11,
+  modalButtonDanger: {
+    borderColor: `${colors.red}40`,
+  },
+  modalButtonText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.text3,
-    marginBottom: 4,
-  },
-  ratingValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: colors.text2,
-    textAlign: 'center',
-    marginTop: 16,
   },
 });

@@ -10,12 +10,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { DrawerActions } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 import { SvgIcon } from '@/components/SvgIcon';
 import api from '@/utils/api';
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
   const { user, logout } = useAuth();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
@@ -100,15 +104,28 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.backButton}>
-          <SvgIcon name="arrowLeft" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={{ width: 40 }} />
+    <View style={styles.container}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      
+      {/* Topbar */}
+      <View style={styles.topbar}>
+        <View style={styles.topbarLeft}>
+          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
+            <SvgIcon name="menu" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.topbarTitle}>
+            <Text style={styles.topbarTitleText}>Profile</Text>
+            <Text style={styles.topbarBreadcrumb}>CCS Faculty Portal • Profile</Text>
+          </View>
+        </View>
+        <View style={styles.topbarRight}>
+          <TouchableOpacity style={styles.topbarIconBtn}>
+            <SvgIcon name="bell" size={22} color={colors.text2} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
@@ -170,7 +187,8 @@ export default function ProfileScreen() {
       <Text style={styles.footer}>
         © 2026 Camarines Sur Polytechnic Colleges
       </Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -178,9 +196,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  contentContainer: {
-    paddingBottom: 32,
   },
   loadingContainer: {
     flex: 1,
@@ -193,27 +208,54 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     color: colors.text3,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  topbar: {
     backgroundColor: colors.bg2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 48,
   },
-  backButton: {
-    padding: 4,
+  topbarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
   },
-  headerTitle: {
-    fontSize: 20,
+  topbarTitle: {
+    flex: 1,
+  },
+  topbarTitleText: {
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
   },
+  topbarBreadcrumb: {
+    fontSize: 11,
+    color: colors.text3,
+    marginTop: 2,
+  },
+  topbarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  topbarIconBtn: {
+    position: 'relative',
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+  },
+  contentContainer: {
+    paddingBottom: 32,
+  },
   profileCard: {
     backgroundColor: colors.bg2,
-    margin: 16,
+    marginBottom: 24,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
@@ -276,7 +318,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   menuContainer: {
     backgroundColor: colors.bg2,
-    marginHorizontal: 16,
+    marginBottom: 24,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
@@ -316,8 +358,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.bg2,
-    marginHorizontal: 16,
-    marginTop: 16,
+    marginBottom: 24,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
