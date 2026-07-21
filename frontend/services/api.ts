@@ -62,17 +62,17 @@ class ApiService {
 
   // Auth endpoints
   async login(email: string, password: string) {
-    const response = await this.client.post('/auth/login', { email, password });
+    const response = await this.client.post('/login', { email, password });
     return response.data;
   }
 
   async register(userData: any) {
-    const response = await this.client.post('/auth/register', userData);
+    const response = await this.client.post('/register', userData);
     return response.data;
   }
 
   async logout() {
-    const response = await this.client.post('/auth/logout');
+    const response = await this.client.post('/logout');
     return response.data;
   }
 
