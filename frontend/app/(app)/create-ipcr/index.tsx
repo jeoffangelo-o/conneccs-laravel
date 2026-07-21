@@ -70,7 +70,7 @@ export default function CreateIPCRScreen() {
     Alert.alert(
       'Success',
       `IPCR created successfully for ${period} ${year}!`,
-      [{ text: 'OK', onPress: () => router.back() }]
+      [{ text: 'OK', onPress: () => router.push('/my-ipcr') }]
     );
   };
 
@@ -81,7 +81,7 @@ export default function CreateIPCRScreen() {
       {/* Topbar */}
       <View style={styles.topbar}>
         <TouchableOpacity 
-          onPress={() => router.back()}
+          onPress={() => router.push('/my-ipcr')}
           style={{ padding: 10 }}
         >
           <SvgIcon name="arrowBack" size={24} color={colors.text} style={{}} />

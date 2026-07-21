@@ -203,7 +203,7 @@ export default function ReportorialFolderScreen() {
       {/* Topbar */}
       <View style={styles.topbar}>
         <View style={styles.topbarLeft}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.push('/reportorial-requirements')}>
             <SvgIcon name="arrowLeft" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.topbarTitle}>

@@ -96,7 +96,7 @@ export default function IPCRDetailScreen() {
         <View style={styles.topbar}>
           <View style={styles.topbarLeft}>
             <TouchableOpacity 
-              onPress={() => router.back()}
+              onPress={() => router.push('/my-ipcr')}
               style={{ padding: 10 }}
             >
               <SvgIcon name="arrowBack" size={24} color={colors.text} style={{}} />
@@ -247,7 +247,7 @@ export default function IPCRDetailScreen() {
       <View style={styles.topbar}>
         <View style={styles.topbarLeft}>
           <TouchableOpacity 
-            onPress={() => router.back()}
+            onPress={() => router.push('/my-ipcr')}
             style={{ padding: 10 }}
           >
             <SvgIcon name="arrowBack" size={24} color={colors.text} style={{}} />

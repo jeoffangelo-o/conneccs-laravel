@@ -153,7 +153,7 @@ export default function OPCRPreviewScreen() {
         <View style={styles.errorContainer}>
           <SvgIcon name="alertCircle" size={48} color={colors.red} />
           <Text style={styles.errorText}>Failed to load preview</Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/opcr')}>
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -170,7 +170,7 @@ export default function OPCRPreviewScreen() {
       {/* Topbar */}
       <View style={styles.topbar}>
         <View style={styles.topbarLeft}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.push('/opcr')}>
             <SvgIcon name="arrowLeft" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.topbarTitle}>
