@@ -59,6 +59,8 @@ export default function ReportorialRequirementsScreen() {
     try {
       setLoading(true);
       const response = await apiService.get('/reportorial/folders');
+      console.log('Reportorial API Response:', response.data);
+      
       if (response.data.success) {
         // Map backend data to frontend format
         const mappedFolders = response.data.data.map((folder: any) => ({
@@ -68,11 +70,17 @@ export default function ReportorialRequirementsScreen() {
           color: folder.color,
           filesCount: folder.filesCount || 0,
         }));
+        console.log('Mapped folders:', mappedFolders);
         setFolders(mappedFolders);
+      } else {
+        console.error('API returned success: false', response.data);
+        setFolders([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load folders:', error);
-      Alert.alert('Error', 'Failed to load folders');
+      console.error('Error details:', error.response?.data);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to load folders');
+      setFolders([]);
     } finally {
       setLoading(false);
     }
