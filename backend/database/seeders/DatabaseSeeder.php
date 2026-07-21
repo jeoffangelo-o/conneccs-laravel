@@ -38,6 +38,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->command->info('');
+        
+        // Seed reportorial folders
+        $this->call([
+            ReportorialFolderSeeder::class,
+        ]);
+
+        $this->command->info('');
         $this->command->info('✅ Database seeding completed!');
         $this->command->info('🚀 You can now login with any of the test accounts listed above');
     }

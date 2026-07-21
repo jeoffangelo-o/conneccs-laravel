@@ -49,37 +49,30 @@ export default function ReportorialFolderScreen() {
   const folderId = params.folderId;
 
   useEffect(() => {
-    loadFiles();
+    if (folderId) {
+      loadFiles();
+    }
   }, [folderId]);
 
   const loadFiles = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await apiService.get(`/reportorial/folders/${folderId}/files`);
-      // setFiles(response.data);
-      
-      // Mock data for now
-      setFiles([
-        {
-          id: 1,
-          name: 'Sample_Document.pdf',
-          type: 'pdf',
-          size: '2.5 MB',
-          uploadedBy: 'John Doe',
-          uploadedAt: '2026-07-15T10:30:00',
-        },
-        {
-          id: 2,
-          name: 'Report_2026.docx',
-          type: 'docx',
-          size: '1.2 MB',
-          uploadedBy: 'Jane Smith',
-          uploadedAt: '2026-07-14T14:20:00',
-        },
-      ]);
+      const response = await apiService.get(`/reportorial/folders/${folderId}`);
+      if (response.data.success) {
+        const filesData = response.data.data.files.map((file: any) => ({
+          id: file.id,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          uploadedBy: file.uploadedBy,
+          uploadedAt: file.uploadedAt,
+          url: file.url,
+        }));
+        setFiles(filesData);
+      }
     } catch (error) {
       console.error('Failed to load files:', error);
+      setFiles([]);
     } finally {
       setLoading(false);
     }

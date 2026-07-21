@@ -45,15 +45,43 @@ export default function ReportorialRequirementsScreen() {
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
   
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [folders, setFolders] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  useEffect(() => {
+    loadFolders();
+  }, []);
+
+  const loadFolders = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.get('/reportorial/folders');
+      if (response.data.success) {
+        // Map backend data to frontend format
+        const mappedFolders = response.data.data.map((folder: any) => ({
+          id: folder.id,
+          name: folder.name,
+          icon: folder.icon,
+          color: folder.color,
+          filesCount: folder.filesCount || 0,
+        }));
+        setFolders(mappedFolders);
+      }
+    } catch (error) {
+      console.error('Failed to load folders:', error);
+      Alert.alert('Error', 'Failed to load folders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => setRefreshing(false), 1000);
+    await loadFolders();
+    setRefreshing(false);
   };
 
   const handleFolderPress = (folder: typeof REPORTORIAL_FOLDERS[0]) => {
@@ -66,7 +94,7 @@ export default function ReportorialRequirementsScreen() {
     });
   };
 
-  const filteredFolders = REPORTORIAL_FOLDERS.filter(folder =>
+  const filteredFolders = folders.filter(folder =>
     folder.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

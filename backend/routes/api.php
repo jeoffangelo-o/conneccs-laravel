@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ChannelController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OPCRUploadController;
 use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\ReportorialController;
 
 // Test endpoint
 Route::get('/test', function () {
@@ -69,5 +70,17 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // New: Save edited/corrected OPCR data
         Route::post('/save-parsed', [OPCRUploadController::class, 'saveParsedData']);
+    });
+    
+    // Reportorial file management routes
+    Route::prefix('reportorial')->group(function () {
+        Route::get('/folders', [ReportorialController::class, 'getFolders']);
+        Route::get('/folders/{folderId}', [ReportorialController::class, 'getFolderDetails']);
+        Route::post('/folders/{folderId}/upload', [ReportorialController::class, 'uploadFile']);
+        Route::get('/files/{fileId}/download', [ReportorialController::class, 'downloadFile']);
+        Route::delete('/files/{fileId}', [ReportorialController::class, 'deleteFile']);
+        Route::put('/files/{fileId}', [ReportorialController::class, 'updateFile']);
+        Route::get('/statistics', [ReportorialController::class, 'getStatistics']);
+        Route::get('/search', [ReportorialController::class, 'searchFiles']);
     });
 });
